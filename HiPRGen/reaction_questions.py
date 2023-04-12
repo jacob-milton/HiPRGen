@@ -1493,7 +1493,7 @@ euvl_phase2_logging_tree = [
     (reaction_is_charge_transfer(), Terminal.DISCARD),
     (reaction_is_covalent_charge_decomposable(), Terminal.DISCARD),
     (reaction_is_coupled_electron_fragment_transfer(), Terminal.DISCARD),
-    (star_count_diff_above_threshold(6), Terminal.DISCARD),
+    (star_count_diff_above_threshold(6), Terminal.KEEP),
     (
         fragment_matching_found(),
         [
@@ -1504,7 +1504,7 @@ euvl_phase2_logging_tree = [
                 reaction_is_covalent_decomposable(),
                 [
                     (fragments_are_not_2A_B(), Terminal.DISCARD),
-                    (reaction_default_true(), Terminal.KEEP),
+                    (reaction_default_true(), Terminal.DISCARD),
                 ],
             ),
             (reaction_default_true(), Terminal.DISCARD),
