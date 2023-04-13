@@ -1493,11 +1493,11 @@ euvl_phase2_logging_tree = [
     (reaction_is_charge_transfer(), Terminal.DISCARD),
     (reaction_is_covalent_charge_decomposable(), Terminal.DISCARD),
     (reaction_is_coupled_electron_fragment_transfer(), Terminal.DISCARD),
-    (star_count_diff_above_threshold(6), Terminal.KEEP),
+    (star_count_diff_above_threshold(6), Terminal.DISCARD),
     (
         fragment_matching_found(),
         [
-            (single_reactant_single_product_not_atom_transfer(), Terminal.DISCARD),
+            (single_reactant_single_product_not_atom_transfer(), Terminal.KEEP),
             (single_reactant_double_product_ring_close(), Terminal.DISCARD),
             (reaction_is_hindered(), Terminal.DISCARD),
             (
