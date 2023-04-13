@@ -1503,7 +1503,7 @@ euvl_phase2_logging_tree = [
             (
                 reaction_is_covalent_decomposable(),
                 [
-                    (fragments_are_not_2A_B(), Terminal.DISCARD),
+                    (fragments_are_not_2A_B(), Terminal.KEEP),
                     (reaction_default_true(), Terminal.DISCARD),
                 ],
             ),
