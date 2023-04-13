@@ -1498,12 +1498,12 @@ euvl_phase2_logging_tree = [
         fragment_matching_found(),
         [
             (single_reactant_single_product_not_atom_transfer(), Terminal.DISCARD),
-            (single_reactant_double_product_ring_close(), Terminal.KEEP),
-            (reaction_is_hindered(), Terminal.DISCARD),
+            (single_reactant_double_product_ring_close(), Terminal.DISCARD),
+            (reaction_is_hindered(), Terminal.KEEP),
             (
                 reaction_is_covalent_decomposable(),
                 [
-                    (fragments_are_not_2A_B(), Terminal.KEEP),
+                    (fragments_are_not_2A_B(), Terminal.DISCARD),
                     (reaction_default_true(), Terminal.DISCARD),
                 ],
             ),
