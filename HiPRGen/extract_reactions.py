@@ -7,7 +7,6 @@ Created on Fri Apr 14 13:13:41 2023
 from monty.serialization import loadfn
 import operator
 import pickle
-from species_filter import really_covalent_isomorphic
 
 # #Provide Evan with a list of the form:
 
