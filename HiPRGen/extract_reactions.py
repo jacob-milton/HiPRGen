@@ -40,6 +40,7 @@ first_entries = loadfn(first_name + ".json") #loads json as a dictionary whose k
 print('Loading mol_entries.pickle...')
 with open('mol_entries.pickle', 'rb') as f:
     mol_entries = pickle.load(f)
+    print(mol_entries)
 print('Done!')
 
 def resonant_reaction(reaction_dict, added_hashes):
@@ -49,11 +50,11 @@ def resonant_reaction(reaction_dict, added_hashes):
     products = []
 
     for reactant in mpcule_dict.keys(): #find graph hashes corresponding to those mpculeids
-        r_hash = reactant.covalent_hash
+        r_hash = mol_entries[reactant].covalent_hash
         reactants.append(r_hash)
     reactants.sort()
     for product in mpculte_dict.values:
-        p_hash = product.covalent_hash
+        p_hash = mol_entries[product].covalent_hash
         reactants.append(r_hash)
     products.sort()
 
