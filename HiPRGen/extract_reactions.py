@@ -4,7 +4,6 @@ Created on Fri Apr 14 13:13:41 2023
 
 @author: JRMilton
 """
-from mol_entry import MoleculeEntry
 from monty.serialization import loadfn
 import operator
 import pickle
