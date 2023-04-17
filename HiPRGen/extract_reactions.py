@@ -63,7 +63,7 @@ def resonant_reaction(reaction_dict, added_hashes):
     for reactant_pair in added_hashes.keys():  #for each reaction currently in mpculids,
         if reactant_pair == hash_dict.keys()[0]: #compare the reactant hashes of the new reaction and the old one
             product_pair = saved_hashes[reactant_pair] #if they're the same, compare the product hashes 
-            if product_pair = hash_dict.values()[0]
+            if product_pair == hash_dict.values()[0]
                 return {} #if those are the same, return true, otherwise return false
 
     return hash_dict
