@@ -61,7 +61,7 @@ def resonant_reaction(reaction_dict, added_hashes):
     reaction_dict[reactants] = products
 
     for reactant_pair in added_hashes.keys():  #for each reaction currently in mpculids,
-        if reactant_pair = hash_dict.keys()[0]: #compare the reactant hashes of the new reaction and the old one
+        if reactant_pair == hash_dict.keys()[0]: #compare the reactant hashes of the new reaction and the old one
             product_pair = saved_hashes[reactant_pair] #if they're the same, compare the product hashes 
             if product_pair = hash_dict.values()[0]
                 return {} #if those are the same, return true, otherwise return false
@@ -93,46 +93,46 @@ for reaction in first_entries["pathways"].keys():
 print('Done! ', len(mpcule_ids), ' added')
 
 
-print('Adding reactions for phase 2 network products...')                                             
-second_name = 'sink_report'
-second_entries = loadfn(second_name + ".json") #loads json as a dictionary whose keys are mol ids and values are
-                                                #dictionaries whose keys are labels of values
-print(len(second_entries.keys()))
-for dictionary in second_entries.values():
-    species_index = dictionary["species_index"]
-    reaction_json = loadfn(str(species_index) + "_pathway.json") #dictionary containing two keys: pathways and reactions. 
-    pathways = reaction_json["pathways"]
-    pathways.sort(key = operator.itemgetter('frequency'), reverse = True)
-    top_pathways = []
-    n = 1
-    ten_saved = False
+# print('Adding reactions for phase 2 network products...')                                             
+# second_name = 'sink_report'
+# second_entries = loadfn(second_name + ".json") #loads json as a dictionary whose keys are mol ids and values are
+#                                                 #dictionaries whose keys are labels of values
+# print(len(second_entries.keys()))
+# for dictionary in second_entries.values():
+#     species_index = dictionary["species_index"]
+#     reaction_json = loadfn(str(species_index) + "_pathway.json") #dictionary containing two keys: pathways and reactions. 
+#     pathways = reaction_json["pathways"]
+#     pathways.sort(key = operator.itemgetter('frequency'), reverse = True)
+#     top_pathways = []
+#     n = 1
+#     ten_saved = False
     
-    while not ten_saved:
-        for dictionary in pathways:
-            if int(dictionary['weight']) == n:
-                top_pathways.append(dictionary['pathway'])
-                if len(top_pathways) == 10:
-                    ten_saved = True
-                    break
-        n += 1
+#     while not ten_saved:
+#         for dictionary in pathways:
+#             if int(dictionary['weight']) == n:
+#                 top_pathways.append(dictionary['pathway'])
+#                 if len(top_pathways) == 10:
+#                     ten_saved = True
+#                     break
+#         n += 1
     
-    for rxn in top_pathways:
-        for reaction in rxn:
-            for num in reaction_json["reactions"].keys():
-                if num == str(reaction):
-                    mpcule_ids.append(reaction_json["reactions"][num])
-    n = 1
+#     for rxn in top_pathways:
+#         for reaction in rxn:
+#             for num in reaction_json["reactions"].keys():
+#                 if num == str(reaction):
+#                     mpcule_ids.append(reaction_json["reactions"][num])
+#     n = 1
                 
-print('Done! ', len(mpcule_ids), ' reactions total')
+# print('Done! ', len(mpcule_ids), ' reactions total')
 
-print('Adding reactions for phase 2 tally...')  
-third_name = 'reaction_tally'
-third_entries = loadfn(third_name + ".json")
+# print('Adding reactions for phase 2 tally...')  
+# third_name = 'reaction_tally'
+# third_entries = loadfn(third_name + ".json")
 
-for reaction in third_entries["pathways"].keys():
-    if third_entries["pathways"][reaction] > 500:
-        for rxn in third_entries["reactions"].keys():
-            if str(reaction) == rxn:
-                mpcule_ids.append(third_entries["reactions"][rxn])
+# for reaction in third_entries["pathways"].keys():
+#     if third_entries["pathways"][reaction] > 500:
+#         for rxn in third_entries["reactions"].keys():
+#             if str(reaction) == rxn:
+#                 mpcule_ids.append(third_entries["reactions"][rxn])
 
-print('Done! ', len(mpcule_ids), ' reactions total')
+# print('Done! ', len(mpcule_ids), ' reactions total')
