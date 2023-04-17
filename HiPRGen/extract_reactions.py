@@ -31,6 +31,8 @@ from species_filter import really_covalent_isomorphic
 # total should be less than 7000
 # JSONs contain reaction IDs, rn.sqlite contains mapping from reaction ID to species IDs, mol_entries.pickle contains mapping from species IDs to 
 mpcule_ids = []
+added =[]
+added_hashes = {}
 first_name = 'reaction_tally_p1'
 first_entries = loadfn(first_name + ".json") #loads json as a dictionary whose keys are mol ids and values are
                                                 #dictionaries whose keys are labels of values
@@ -40,8 +42,31 @@ with open('mol_entries.pickle', 'rb') as f:
     mol_entries = pickle.load(f)
 print('Done!')
 
-def resonant_reaction(reaction):
-    
+def resonant_reaction(reaction_dict, added_hashes):
+    #take in mpculeids for reaction we're testing--a dictionary containing a tuple of reactants as the key and products as the values
+    hash_dict = {}
+    reactants = []
+    products = []
+
+    for reactant in mpcule_dict.keys(): #find graph hashes corresponding to those mpculeids
+        r_hash = reactant.covalent_hash
+        reactants.append(r_hash)
+    reactants.sort()
+    for product in mpculte_dict.values:
+        p_hash = product.covalent_hash
+        reactants.append(r_hash)
+    products.sort()
+
+    reaction_dict[reactants] = products
+
+    for reactant_pair in added_hashes.keys():  #for each reaction currently in mpculids,
+        if reactant_pair = hash_dict.keys()[0]: #compare the reactant hashes of the new reaction and the old one
+            product_pair = saved_hashes[reactant_pair] #if they're the same, compare the product hashes 
+            if product_pair = hash_dict.values()[0]
+                return {} #if those are the same, return true, otherwise return false
+
+    return hash_dict
+
 print('Adding reactions from phase 1...')   
 for reaction in first_entries["pathways"].keys():
     for rxn in first_entries["reactions"].keys():
@@ -52,9 +77,20 @@ for reaction in first_entries["pathways"].keys():
                     if species == None:
                         electron_test = True
             if not electron_test:
-                mpcule_ids.append(first_entries["reactions"][rxn])
+                if reaction not in added:
+                    reaction_dict = {}
+                    reactant_mpcule_list = list(first_entries["reactions"][rxn]["reactants"].values())
+                    product_mpcule_list = list(first_entries["reactions"][rxn]["products"].values())
+                    reaction_dict[reactants] = products
+                    resonance = resonant_reaction(reaction_dict, added_hashes)
+                    if resonance != {}:
+                        added.append(reaction)
+                        mpcule_ids.append(first_entries["reactions"][rxn])
+                        added_hashes[list(resonance.keys())] = list(resonance.values())
+                        
 
 print('Done! ', len(mpcule_ids), ' added')
+
 
 print('Adding reactions for phase 2 network products...')                                             
 second_name = 'sink_report'
