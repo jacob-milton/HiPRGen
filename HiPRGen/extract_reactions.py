@@ -61,9 +61,11 @@ for reaction in first_entries["pathways"].keys():
                         electron_test = True
             if not electron_test:
                 if reaction not in added:
-                    reactants = first_entries["reactions"][rxn]["reactants"].values()
+                    reactants = first_entries["reactions"][rxn]["reactants"]
+                    print(reactants)
                     reactants_list = list(reactants)
-                    products = first_entries["reactions"][rxn]["products"].values()
+                    products = first_entries["reactions"][rxn]["products"]
+                    print(products)
                     products_list = list(products)
                     participants = [reactants_list, products_list]
                     reaction_charges = []
