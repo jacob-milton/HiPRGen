@@ -80,8 +80,14 @@ for reaction in first_entries["pathways"].keys():
                     for side in participants:
                         side.sort()
                         side = tuple(side)
+                        print(side)
+                        print(type(side))
                     reaction_dict = {}
                     participants = tuple(participants)
+                    print(participants)
+                    print(type(participants))
+                    print(sum(reaction_charges))
+                    print(type(sum(reaction_charges))
                     reaction_dict[participants] = sum(reaction_charges)
                     if not resonant_reaction(reaction_dict, added_hashes):
                         added.append(reaction)
