@@ -68,7 +68,7 @@ for reaction in first_entries["pathways"].keys():
                 if reaction not in added:
                     reactants = first_entries["reactions"][rxn]["reactants"]
                     products = first_entries["reactions"][rxn]["products"]
-                    participants = [reactants, products]
+                    participants = [reactants, products] #think I'm adding a mysterious comma here
                     reaction_charges = []
                     for side in participants:
                         for species in side: #takes the list of ids, finds their corresponding mol_entries, which have their charges and hashes
