@@ -39,33 +39,16 @@ first_entries = loadfn(first_name + ".json") #loads json as a dictionary whose k
 print('Loading mol_entries.pickle...')
 with open('mol_entries.pickle', 'rb') as f:
     mol_entries = pickle.load(f)
-    print(mol_entries)
 print('Done!')
 
 def resonant_reaction(reaction_dict, added_hashes):
-    #take in mpculeids for reaction we're testing--a dictionary containing a tuple of reactants as the key and products as the values
-    hash_dict = {}
-    reactants = []
-    products = []
-
-    for reactant in mpcule_dict.keys(): #find graph hashes corresponding to those mpculeids
-        r_hash = mol_entries[reactant].covalent_hash
-        reactants.append(r_hash)
-    reactants.sort()
-    for product in mpculte_dict.values:
-        p_hash = mol_entries[product].covalent_hash
-        reactants.append(r_hash)
-    products.sort()
-
-    reaction_dict[reactants] = products
-
-    for reactant_pair in added_hashes.keys():  #for each reaction currently in mpculids,
-        if reactant_pair == hash_dict.keys()[0]: #compare the reactant hashes of the new reaction and the old one
-            product_pair = saved_hashes[reactant_pair] #if they're the same, compare the product hashes 
-            if product_pair == hash_dict.values()[0]:
-                return {} #if those are the same, return true, otherwise return false
-
-    return hash_dict
+    #take in reaction_dict with {[reactant_hashes],[product_hashes]:reaction_charge}--a dictionary containing a tuple of reactants as the key and products as the values
+    for reaction in added_hashes.keys():  #for each reaction currently in mpculids,
+        if list(reaction_dict.keys()) == reaction: #compare the reactant hashes of the new reaction and the old one
+            if added_hashes[reaction] == list(reaction_dict.hashes()) #if they're the same, compare the product hashes 
+                return True
+                
+    return False
 
 print('Adding reactions from phase 1...')   
 for reaction in first_entries["pathways"].keys():
@@ -78,17 +61,31 @@ for reaction in first_entries["pathways"].keys():
                         electron_test = True
             if not electron_test:
                 if reaction not in added:
+                    reactants = first_entries["reactions"][rxn]["reactants"].values()
+                    reactants_list = list(reactants)
+                    products = first_entries["reactions"][rxn]["products"].values()
+                    products_list = list(products)
+                    participants = [reactants_list, products_list]
+                    reaction_charges = []
+                    for side in participants:
+                        for species in side: #takes the list of ids, finds their corresponding mol_entries, which have their charges and hashes
+                            for mol_entry in mol_entries:
+                                m_id = mol_entry.entry_id
+                                if m_id == species:
+                                    species_charge = mol_entry.charge
+                                    charges.append(species_charge)
+                                    species_hash = mol_entry.covalent_hash
+                                    species_index = side.index(species)
+                                    side[species_index] = species_hash
+                    for side in participants:
+                        side.sort()
                     reaction_dict = {}
-                    reactant_mpcule_list = list(first_entries["reactions"][rxn]["reactants"].values())
-                    product_mpcule_list = list(first_entries["reactions"][rxn]["products"].values())
-                    reaction_dict[reactants] = products
-                    resonance = resonant_reaction(reaction_dict, added_hashes)
-                    if resonance != {}:
+                    reaction_dict[participants] = sum(reaction_charges)
+                    if not resonant_reaction(reaction_dict, added_hashes):
                         added.append(reaction)
                         mpcule_ids.append(first_entries["reactions"][rxn])
-                        added_hashes[list(resonance.keys())] = list(resonance.values())
+                        added_hashes[participants] = sum(reaction_charges)
                         
-
 print('Done! ', len(mpcule_ids), ' added')
 
 
