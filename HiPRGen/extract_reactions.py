@@ -45,9 +45,9 @@ def resonant_reaction(reaction_dict, added_hashes):
     #take in reaction_dict with {[reactant_hashes],[product_hashes]:reaction_charge}--a dictionary containing a tuple of reactants as the key and products as the values
     for reaction in added_hashes.keys():  #for each reaction currently in mpculids,
         if list(reaction_dict.keys()) == reaction: #compare the reactant hashes of the new reaction and the old one
-            if added_hashes[reaction] == list(reaction_dict.hashes()) #if they're the same, compare the product hashes 
+            if added_hashes[reaction] == list(reaction_dict.hashes()): #if they're the same, compare the product hashes 
                 return True
-                
+
     return False
 
 print('Adding reactions from phase 1...')   
