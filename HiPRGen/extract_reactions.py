@@ -87,7 +87,7 @@ for reaction in first_entries["pathways"].keys():
                     print(participants)
                     print(type(participants))
                     print(sum(reaction_charges))
-                    print(type(sum(reaction_charges))
+                    print(type(sum(reaction_charges)))
                     reaction_dict[participants] = sum(reaction_charges)
                     if not resonant_reaction(reaction_dict, added_hashes):
                         added.append(reaction)
