@@ -79,7 +79,9 @@ for reaction in first_entries["pathways"].keys():
                                     side[species_index] = species_hash
                     for side in participants:
                         side.sort()
+                        side = tuple(side)
                     reaction_dict = {}
+                    participants = tuple(participants)
                     reaction_dict[participants] = sum(reaction_charges)
                     if not resonant_reaction(reaction_dict, added_hashes):
                         added.append(reaction)
