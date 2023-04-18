@@ -62,20 +62,17 @@ for reaction in first_entries["pathways"].keys():
             if not electron_test:
                 if reaction not in added:
                     reactants = first_entries["reactions"][rxn]["reactants"]
-                    print(reactants)
-                    reactants_list = list(reactants)
                     products = first_entries["reactions"][rxn]["products"]
-                    print(products)
-                    products_list = list(products)
-                    participants = [reactants_list, products_list]
+                    participants = [reactants, products]
                     reaction_charges = []
                     for side in participants:
                         for species in side: #takes the list of ids, finds their corresponding mol_entries, which have their charges and hashes
                             for mol_entry in mol_entries:
                                 m_id = mol_entry.entry_id
                                 if m_id == species:
+                                    print('match found')
                                     species_charge = mol_entry.charge
-                                    charges.append(species_charge)
+                                    reaction_charges.append(species_charge)
                                     species_hash = mol_entry.covalent_hash
                                     species_index = side.index(species)
                                     side[species_index] = species_hash
