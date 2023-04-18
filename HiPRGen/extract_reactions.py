@@ -70,8 +70,9 @@ for reaction in first_entries["pathways"].keys():
                             for mol_entry in mol_entries:
                                 m_id = mol_entry.entry_id
                                 if m_id == species:
-                                    print('match found')
                                     species_charge = mol_entry.charge
+                                    print(species_charge)
+                                    print(type(species_charge))
                                     reaction_charges.append(species_charge)
                                     species_hash = mol_entry.covalent_hash
                                     species_index = side.index(species)
