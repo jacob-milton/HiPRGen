@@ -44,7 +44,9 @@ print('Done!')
 def resonant_reaction(reaction_dict, added_hashes):
     #take in reaction_dict with {[reactant_hashes],[product_hashes]:reaction_charge}--a dictionary containing a tuple of reactants as the key and products as the values
     for reaction in added_hashes.keys():  #for each reaction currently in mpculids,
-        if list(reaction_dict.keys()) == reaction: #compare the reactant hashes of the new reaction and the old one
+        print(reaction)
+        print(reaction_dict.keys())
+        if reaction_dict.keys() == reaction: #compare the reactant hashes of the new reaction and the old one
             if added_hashes[reaction] == list(reaction_dict.hashes()): #if they're the same, compare the product hashes 
                 return True
 
@@ -71,8 +73,6 @@ for reaction in first_entries["pathways"].keys():
                                 m_id = mol_entry.entry_id
                                 if m_id == species:
                                     species_charge = mol_entry.charge
-                                    print(species_charge)
-                                    print(type(species_charge))
                                     reaction_charges.append(species_charge)
                                     species_hash = mol_entry.covalent_hash
                                     species_index = side.index(species)
