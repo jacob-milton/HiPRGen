@@ -64,11 +64,8 @@ for reaction in first_entries["pathways"].keys():
             if not electron_test:
                 if reaction not in added:
                     reactants = first_entries["reactions"][rxn]["reactants"]
-                    print(reactants)
                     products = first_entries["reactions"][rxn]["products"]
-                    print(products)
                     participants = [reactants, products] #think I'm adding a mysterious comma here
-                    print(participants)
                     reaction_charges = []
                     for side in participants:
                         for species in side: #takes the list of ids, finds their corresponding mol_entries, which have their charges and hashes
@@ -83,13 +80,12 @@ for reaction in first_entries["pathways"].keys():
                     for side in participants:
                         side.sort()
                         side_tuple = tuple(side)
-                        print(side_tuple)
                         side_index = participants.index(side)
                         participants[side_index] = side_tuple
                     reaction_dict = {}
                     participants = tuple(participants)
-                    print(participants)
                     reaction_dict[participants] = sum(reaction_charges)
+                    print(reaction_dict)
                     if not resonant_reaction(reaction_dict, added_hashes):
                         added.append(reaction)
                         mpcule_ids.append(first_entries["reactions"][rxn])
