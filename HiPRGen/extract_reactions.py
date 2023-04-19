@@ -44,14 +44,9 @@ print('Done!')
 def resonant_reaction(reaction_dict, added_hashes):
     #take in reaction_dict with {[reactant_hashes],[product_hashes]:reaction_charge}--a dictionary containing a tuple of reactants as the key and products as the values
     for reaction in added_hashes.keys():  #for each reaction currently in mpculids,
-        matches = 0
-        for side in reaction_dict.keys():
-            print(side)
-            print(reaction)
-            if side in reaction:
-                print('match')
-                matches += 1
-        if matches == 2:
+        for rxn in reaction_dict.keys():
+        if rxn == reaction: #compare the reactant hashes of the new reaction and the old one
+            print('same graphs')
             if added_hashes[reaction] == int(reaction_dict.values()): #if they're the same, compare the product hashes
                 print('fired')
                 return True
@@ -71,7 +66,7 @@ for reaction in first_entries["pathways"].keys():
                 if reaction not in added:
                     reactants = first_entries["reactions"][rxn]["reactants"]
                     products = first_entries["reactions"][rxn]["products"]
-                    participants = [reactants, products] 
+                    participants = [reactants, products] #think I'm adding a mysterious comma here
                     reaction_charges = []
                     for side in participants:
                         for species in side: #takes the list of ids, finds their corresponding mol_entries, which have their charges and hashes
