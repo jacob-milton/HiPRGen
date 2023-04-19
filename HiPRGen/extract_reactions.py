@@ -22,7 +22,7 @@ with open('mol_entries.pickle', 'rb') as f: #loads mol_entries from pickle file
 print('Done!')
 
 def create_reaction_dict(participants):
-    '''
+    """
     Takes a list of lists of reactant and product mpculeids and saves them to a dictionary
     whose key is a 2-tuple of the reactant and product graph hashes and whose value is the 
     sum of the charges of all species in the reaction. 
@@ -30,8 +30,7 @@ def create_reaction_dict(participants):
     participants: a list of the form: [[reactant1mpculid, reactant2mpculid][product1mpculid, product2mpculid]]
 
     Returns: reaction_dict
-    '''
-
+    """
     reaction_charges = []
     participants_copy = copy.deepcopy(participants)
     for side in participants_copy:
@@ -55,7 +54,7 @@ def create_reaction_dict(participants):
     return reaction_dict
 
 def resonant_reaction(reaction_dict, added_hashes):
-    '''
+    """
     If a reaction is of the type:
 
     A + B -> C + D
@@ -72,8 +71,7 @@ def resonant_reaction(reaction_dict, added_hashes):
 
     Returns: True if the reaction we're testing resonantes with one already added
     to our list, and False otherwise.
-    '''
-
+    """
     for reaction in added_hashes.keys(): #compare the graph hashes of the reaction we're testing to all those already added
         for rxn in reaction_dict.keys():
             if rxn == reaction: #if the graphs of both products and reactants are the same,
@@ -83,7 +81,7 @@ def resonant_reaction(reaction_dict, added_hashes):
     return False
 
 def reverse_reaction(reaction_dict, added_hashes):
-    '''
+    """
     If a reaction is of the form A+B -> C+D and we have already saved the reverse
     reaction, the reactions will have the same transition state and therefore
     only one needs to be saved.
@@ -93,8 +91,7 @@ def reverse_reaction(reaction_dict, added_hashes):
     added_hashes: a dictionary containing all reaction_dicts that have already been added to our reaction list
 
     Returns: True if the reverse reaction is already present in our list, False otherwise.
-    '''
-
+    """
     for reaction in reaction_dict.keys():
         reverse = (reaction[1], reaction[0])
         for rxn in added_hashes:
@@ -104,15 +101,14 @@ def reverse_reaction(reaction_dict, added_hashes):
     return False
 
 def charge_transfer_reaction(reaction_dict):
-    '''
+    """
     Removes reactions where no bonds are broken or formed, only electrons are transferred
     between reactants. 
 
     reaction_dict: dictionary of the form: {((reactant_hashes), (product_hashes)): sum of charges of all species in the reaction}
 
     Returns True if a reaction is electron transfer, False otherwise. 
-    '''
-
+    """
     for reaction in reaction_dict.keys():
         reactant_total_hashes = set(reaction[0])
         product_total_hashes = set(reaction[1])
@@ -125,7 +121,7 @@ def charge_transfer_reaction(reaction_dict):
         return True #finds special cases for electron transfer between two of the same reactant
     else:
         return False
-
+        
     return False
 
 print('Adding reactions from phase 1...')   
