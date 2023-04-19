@@ -5,35 +5,56 @@ Created on Fri Apr 14 13:13:41 2023
 @author: JRMilton
 """
 from monty.serialization import loadfn, dumpfn
+import copy
 import operator
 import pickle
 
-mpcule_ids = []
-added =[]
+mpcule_ids = [] #list of reactions we want to save of the form: [{'reactants': [mpculid, mpculeid], 'products': etc.}]
+added =[] #keeps track of reactions we have already added to prevent redundancy
 added_hashes = {}
 first_name = 'reaction_tally_p1'
 first_entries = loadfn(first_name + ".json") #loads json as a dictionary whose keys are mol ids and values are
                                                 #dictionaries whose keys are labels of values
 
 print('Loading mol_entries.pickle...')
-with open('mol_entries.pickle', 'rb') as f:
+with open('mol_entries.pickle', 'rb') as f: #loads mol_entries from pickle file
     mol_entries = pickle.load(f)
 print('Done!')
 
 def resonant_reaction(reaction_dict, added_hashes):
-    #take in reaction_dict with {[reactant_hashes],[product_hashes]:reaction_charge}--a dictionary containing a tuple of reactants as the key and products as the values
-    for reaction in added_hashes.keys():  #for each reaction currently in mpculids,
+    '''
+    If a reaction is of the type:
+
+    A + B -> C + D
+
+    We assume that the transition state for this reaction will be the same regardless
+    of the charges of the reactants or products, and thus do not add a reaction
+    if a 'resonant reaction' is already in our list.
+
+    reaction_dict: dictionary whose key is a 2-tuple of sorted graph hashes for a 
+    reaction and whose value is the sum of all of the charges of the reaction.
+
+    added_hashes: a dictionary containing reaction_dicts that have already been
+    addded to our list to save
+
+    Returns: True if the reaction we're testing resonantes with one already added
+    to our list, and False otherwise.
+    '''
+    for reaction in added_hashes.keys(): #compare the graph hashes of the reaction we're testing to all those already added
         for rxn in reaction_dict.keys():
-            if rxn == reaction: #compare the reactant hashes of the new reaction and the old one
-                if added_hashes[reaction] == reaction_dict[rxn]: #if they're the same, compare the product hashes
+            if rxn == reaction: #if the graphs of both products and reactants are the same,
+                if added_hashes[reaction] == reaction_dict[rxn]: #and the sum of the charges is the same, return True.
                     return True
 
     return False
 
 def create_reaction_dict(participants):
+    '''
+    Takes a list of lists of reactant and product mpculeids
     reaction_charges = []
-    for side in participants:
-        for species in side: #takes the list of ids, finds their corresponding mol_entries, which have their charges and hashes
+    participants_copy = copy.deepcopy(participants)
+    for side in participants_copy:
+        for species in side: #takes the list of mpculeids, finds their corresponding mol_entries, which have their charges and hashes
             for mol_entry in mol_entries:
                 m_id = mol_entry.entry_id
                 if m_id == species:
@@ -42,14 +63,14 @@ def create_reaction_dict(participants):
                     species_hash = mol_entry.covalent_hash
                     species_index = side.index(species)
                     side[species_index] = species_hash
-    for side in participants:
+    for side in participants_copy: #we want these sorted so we can directly compare reaction tuples later
         side.sort()
         side_tuple = tuple(side)
-        side_index = participants.index(side)
-        participants[side_index] = side_tuple
+        side_index = participants_copy.index(side)
+        participants_copy[side_index] = side_tuple
     reaction_dict = {}
-    participants = tuple(participants)
-    reaction_dict[participants] = sum(reaction_charges)
+    participants_copy = tuple(participants_copy)
+    reaction_dict[participants_copy] = sum(reaction_charges)
     return reaction_dict
 
 def reverse_reaction(reaction_dict, added_hashes):
