@@ -8,10 +8,20 @@ from monty.serialization import loadfn, dumpfn
 import copy
 import operator
 import pickle
+from openpyxl import workbook
+from openpyxl import load_workbook
 
-reaction_formulas = [] #list of reactions we want to save of the form: [{'reactants': [formula(number), formula(number)], 'products': etc.}]
+mpcule_ids = [] #list of reactions we want to save of the form: [{'reactants': [mpculid, mpculeid], 'products': etc.}]
 added =[] #keeps track of reactions we have already added to prevent redundancy
 added_hashes = {}
+first_name = 'reaction_tally_p1'
+first_entries = loadfn(first_name + ".json") #loads json as a dictionary whose keys are mol ids and values are
+                                                #dictionaries whose keys are labels of values
+
+print('Loading mol_entries.pickle...')
+with open('mol_entries.pickle', 'rb') as f: #loads mol_entries from pickle file
+    mol_entries = pickle.load(f)
+print('Done!')
 
 def create_reaction_dict(participants):
     """
@@ -116,15 +126,6 @@ def charge_transfer_reaction(reaction_dict):
         
     return False
 
-first_name = 'reaction_tally_p1'
-first_entries = loadfn(first_name + ".json") #loads json as a dictionary whose keys are mol ids and values are
-                                                #dictionaries whose keys are labels of values
-
-print('Loading mol_entries.pickle...')
-with open('mol_entries.pickle', 'rb') as f: #loads mol_entries from pickle file
-    mol_entries = pickle.load(f)
-print('Done!')
-
 # print('Adding reactions from phase 1...')   
 # for reaction in first_entries["pathways"].keys():
 #     for rxn in first_entries["reactions"].keys():
@@ -146,7 +147,6 @@ print('Done!')
 #                         added_hashes.update(reaction_dict.items())
                         
 # print('Done! ', len(mpcule_ids), ' added')
-
 
 print('Adding reactions for phase 2 network products...')                                             
 second_name = 'sink_report'
@@ -208,4 +208,41 @@ for reaction in third_entries["pathways"].keys():
                             added_hashes.update(reaction_dict.items())
 
 print('Done! ', len(mpcule_ids), ' reactions total')
-dumpfn(mpcule_ids, 'euvl_TSreactions_041823.json')
+
+kinetiscope_reaction_list = []
+
+print('Converting mpculeids to formulas and entry_indcies...')
+for reaction in mpcule_ids: #mpculeids is a list of dictionarys containing two keys: reactants and products with mpcule ids as the values
+    new_reaction = {}
+    reactant_list = []
+    reactants = list(reaction['reactants'])
+    for reactant in reactants:
+        for mol_entry in mol_entries:
+            m_id = mol_entry.entry_id
+            if m_id == reactant:
+                m_index = str(mol_entry.ind)
+                hyphen_index = reactant.find('-')
+                formula = reactant[hyphen_index+1:len(reactant)]
+                reactant_list.append(formula + '(' + m_index + ')')
+    new_reaction['reactants'] = tuple(reactant_list)
+    product_list = []
+    products = list(reaction['products'])
+    for product in products:
+        for mol_entry in mol_entries:
+            m_id = mol_entry.entry_id
+            if m_id == product:
+                m_index = str(mol_entry.ind)
+                formula = product[hyphen_index+1:len(product)]
+                product_list.append(formula + '(' + m_index + ')')          
+    new_reaction['products'] = tuple(product_list)
+    kinetiscope_reaction_list.append(new_reaction)
+
+template = load_workbook(filename = 'Kinetiscope_rxn_template.xlsx')
+ts = template.active
+cell_range = ts['A1':'R1']
+new_file = openpyxl.workbook()
+
+ws = new_sheet.active
+                
+                
+# dumpfn(mpcule_ids, 'euvl_TSreactions_041823.json')

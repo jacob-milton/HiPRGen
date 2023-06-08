@@ -9,17 +9,9 @@ import copy
 import operator
 import pickle
 
-mpcule_ids = [] #list of reactions we want to save of the form: [{'reactants': [mpculid, mpculeid], 'products': etc.}]
+reaction_formulas = [] #list of reactions we want to save of the form: [{'reactants': [formula(number), formula(number)], 'products': etc.}]
 added =[] #keeps track of reactions we have already added to prevent redundancy
 added_hashes = {}
-first_name = 'reaction_tally_p1'
-first_entries = loadfn(first_name + ".json") #loads json as a dictionary whose keys are mol ids and values are
-                                                #dictionaries whose keys are labels of values
-
-print('Loading mol_entries.pickle...')
-with open('mol_entries.pickle', 'rb') as f: #loads mol_entries from pickle file
-    mol_entries = pickle.load(f)
-print('Done!')
 
 def create_reaction_dict(participants):
     """
@@ -124,27 +116,36 @@ def charge_transfer_reaction(reaction_dict):
         
     return False
 
-print('Adding reactions from phase 1...')   
-for reaction in first_entries["pathways"].keys():
-    for rxn in first_entries["reactions"].keys():
-        if str(reaction) == rxn:
-            electron_test = False #removes reactions occuring between a reactant/product and an "electron"
-            for entry in first_entries["reactions"][rxn].values():
-                for species in entry:
-                    if species == None:
-                        electron_test = True
-            if not electron_test:
-                if reaction not in added: #don't add reactions twice
-                    reactants = first_entries["reactions"][rxn]["reactants"]
-                    products = first_entries["reactions"][rxn]["products"]
-                    participants = [reactants, products] 
-                    reaction_dict = create_reaction_dict(participants)
-                    if not resonant_reaction(reaction_dict, added_hashes):
-                        added.append(reaction)
-                        mpcule_ids.append(first_entries["reactions"][rxn])
-                        added_hashes.update(reaction_dict.items())
+first_name = 'reaction_tally_p1'
+first_entries = loadfn(first_name + ".json") #loads json as a dictionary whose keys are mol ids and values are
+                                                #dictionaries whose keys are labels of values
+
+print('Loading mol_entries.pickle...')
+with open('mol_entries.pickle', 'rb') as f: #loads mol_entries from pickle file
+    mol_entries = pickle.load(f)
+print('Done!')
+
+# print('Adding reactions from phase 1...')   
+# for reaction in first_entries["pathways"].keys():
+#     for rxn in first_entries["reactions"].keys():
+#         if str(reaction) == rxn:
+#             electron_test = False #removes reactions occuring between a reactant/product and an "electron"
+#             for entry in first_entries["reactions"][rxn].values():
+#                 for species in entry:
+#                     if species == None:
+#                         electron_test = True
+#             if not electron_test:
+#                 if reaction not in added: #don't add reactions twice
+#                     reactants = first_entries["reactions"][rxn]["reactants"]
+#                     products = first_entries["reactions"][rxn]["products"]
+#                     participants = [reactants, products] 
+#                     reaction_dict = create_reaction_dict(participants)
+#                     if not resonant_reaction(reaction_dict, added_hashes):
+#                         added.append(reaction)
+#                         mpcule_ids.append(first_entries["reactions"][rxn])
+#                         added_hashes.update(reaction_dict.items())
                         
-print('Done! ', len(mpcule_ids), ' added')
+# print('Done! ', len(mpcule_ids), ' added')
 
 
 print('Adding reactions for phase 2 network products...')                                             
