@@ -8,9 +8,11 @@ Created on Wed May 10 13:26:19 2023
 from pymatgen.core.structure import Molecule
 from pymatgen.analysis.graphs import MoleculeGraph
 from pymatgen.analysis.local_env import OpenBabelNN
+from mc_analysis import ReportGenerator
 import glob
 import pickle
 from monty.serialization import loadfn, dumpfn
+import os
 import copy
 import networkx as nx
 import time
@@ -19,6 +21,11 @@ import time
 #molecule graphs
 
 #want to write to an excel file reactions of the form: name1 + name2 -> name3+ name4
+
+"""
+This module saves a json associating each molecule involved in relevent reactions
+with a unique name based on functional group present within that molecule.
+"""
 
 def find_molecules_from_mpculeids(participants, mol_entries):
     """
@@ -169,6 +176,35 @@ def stereoisomer_test(test_dict, mol_entry_id, mol_name):
         stereos[new_name] = mol_entry_id
     return stereos
 
+def generate_name_key(network_loader, key_dict, species_report_path):
+    """
+    print all species
+    """
+    report_generator = ReportGenerator(
+        mol_entries,
+        species_report_path,
+        rebuild_mol_pictures=False)
+
+    report_generator.emit_text("name key")
+    for name, entry_id in key_dict.items():
+        for mol_entry in mol_entries:
+            m_id = mol_entry.entry_id
+            if m_id == entry_id:
+                report_generator.emit_text(str(entry_id))
+                report_generator.emit_text(
+                    "formula: " + mol_entry.formula)
+                report_generator.emit_molecule(mol_entry.index)
+                report_generator.emit_newline()
+
+    report_generator.finished()
+ 
+def export_species_report_to_json(network_loader, path, key_dict):
+    data = {}
+    for i, entry_id in enumerate(key_dict.values()):
+        data[i] = entry_id
+
+    dumpfn(data, path)
+
 start = time.time()
 print('Associating functional groups with their Molecule objects...')
 func_group_dict = {} #take a group of xyz files associated with our functional groups and generate a dictionary associating the molecule graph of that functional group with its name
@@ -234,7 +270,13 @@ if l_list:
     print(l_list)
 print('Done!') 
 
-dumpfn(test_dict, 'named_molecules.json')
+generate_name_key(None, test_dict, os.getcwd())
+export_species_report_to_json(None, os.getcwd(), test_dict)
+#test_dict associates each name with an entry_id (which is the same as an mpculeid)
+#iterate through the desired reactions, and find the name from the mpcule id
+#convert to strings of the appropriate format for kinetiscope
+#save to the excel file
+# dumpfn(test_dict, 'named_molecules.json')
 
 # print('Done! ', len(mpcule_ids), ' reactions total')
 
