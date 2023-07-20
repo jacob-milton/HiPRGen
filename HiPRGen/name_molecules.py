@@ -239,6 +239,8 @@ def write_reaction(reaction_dict, mpculid_dict): #convert to strings of the appr
 #    name = filename.replace('.xyz', '')
 #    func_group_dict[name] = mol
 # print('Done!')
+
+start = time.time()
         
 print('Loading mol_entries.pickle...')
 with open('mol_entries.pickle', 'rb') as f: #loads pymatgen Molecule objects from pickle file
@@ -315,19 +317,56 @@ else:
     dumpfn(key_dict, 'name_index_key.json')
     print('Done!')
 
-# reactions = []
+reactions = []
 
-# for reaction in third_entries["pathways"].keys():
-#     if third_entries["pathways"][reaction] > 500: #only add network products found >500 times
-#         for rxn in third_entries["reactions"].keys():
-#             if str(reaction) == rxn:
-#                 named_reaction = write_reaction(third_entries["reactions"][rxn], mpculid_dict) #iterate through the desired reactions, and find the name from the mpcule id
-#                 reactions.append(named_reaction)
+print('Converting reactions to named reactions...')
+for reaction in third_entries["pathways"].keys():
+    if third_entries["pathways"][reaction] > 500: #only add network products found >500 times
+        for rxn in third_entries["reactions"].keys():
+            if str(reaction) == rxn:
+                named_reaction = write_reaction(third_entries["reactions"][rxn], mpculid_dict) #iterate through the desired reactions, and find the name from the mpcule id
+                reactions.append(named_reaction)
 
+print('Done!')
+
+csv_dict = {}
+
+print('Writing reactions to csv file...')
 with open('Kinetiscope_rxn_template.csv', newline = "") as csvfile:
     reader = csv.reader(csvfile)
-    for row in reader:
-        print(row)    
+    fields = list(next(reader))
+    for reaction in reactions:
+        csv_dict['# equation'] = reaction
+        csv_dict['fwd_A'] = 1
+        csv_dict['fwd_temp_coeff'] = 0
+        csv_dict['fwd_Ea'] = 0
+        csv_dict['fwd_k'] = 10379761818429.5 #kT/h
+        csv_dict['rev_A'] = 1
+        csv_dict['rev_temp_coeff'] = 0
+        csv_dict['rev_Ea'] = 0
+        csv_dict['rev_k'] = 1
+        csv_dict['fwd_k0'] = 1
+        csv_dict['rev_k0'] = 1
+        csv_dict['alpha_alv'] = 0.5
+        csv_dict['equil_potential'] = 0.5
+        csv_dict['num_electrons'] = 0
+        csv_dict['fwd_prog_k'] = 1
+        csv_dict['rev_prog_k'] = 1
+        csv_dict['non_stoichiometric'] = 0
+        csv_dict['rate_constant_format'] = 0
+    writer = csv.DictWriter(csvfile, fieldnames = fields)
+    # writer.writeheader()
+    next(writer) #skip the first row, which already has the headers written
+    writer.writerows(csv_dict)
+  
+print('Done!')      
+    # writer = csv.writer(csvfile)
+
+end = time.time()
+total = end - start
+time_min = total/60
+time_min = round(time_min, 2)
+print('named ', len(test_dict), 'molecules and took', time_min, ' minutes')
 
 #save to the excel file
 # dumpfn(test_dict, 'named_molecules.json')
