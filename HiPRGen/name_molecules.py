@@ -355,8 +355,8 @@ with open('Kinetiscope_rxn_template.csv', newline = "") as csvfile:
         csv_dict['non_stoichiometric'] = 0
         csv_dict['rate_constant_format'] = 0
     writer = csv.DictWriter(csvfile, fieldnames = fields)
-    # writer.writeheader()
-    next(writer) #skip the first row, which already has the headers written
+    writer.writeheader()
+    # next(writer) #skip the first row, which already has the headers written
     writer.writerows(csv_dict)
   
 print('Done!')      
