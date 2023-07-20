@@ -745,7 +745,7 @@ for i, mol_fragment_list in enumerate(double_bond_recombs.values()):
                     break
             if match:
                 continue
-            elif not match:
+            elif not match: #can probably get rid of the above if statement
                 fragment.molecule.set_charge_and_spin(0.0)
                 two_neighbor_carbon_found = False #searches for carbons with only two neighborns
                 lone_fragment_test = False #searches for single atom fragments
