@@ -12,7 +12,7 @@ from pymatgen.analysis.local_env import OpenBabelNN
 import glob
 import pickle
 from monty.serialization import loadfn, dumpfn
-# import os
+import os
 import copy
 import networkx as nx
 import time
@@ -146,8 +146,8 @@ def functional_group_present(mol_graph, func):
 def stereoisomer_test(name_dict, mol_entry_id, mol_name):
     """
     Structural isomers--species with the same formula but different graphs--will return
-    the same name under this paradigm. This function numbers each isomer such that the
-    names remain unique
+    the same name when the name_molecule function is called. This function
+    numbers each stereoisomer such that the new names are unique.
 
     Parameters
     ----------
@@ -182,6 +182,25 @@ def stereoisomer_test(name_dict, mol_entry_id, mol_name):
     return stereos
 
 def write_reaction(reaction_dict, mpculid_dict): #convert to strings of the appropriate format for kinetiscope
+    """
+    Kinetiscope can read in reactions of the format name1 + name2 => name3
+    + name4. This function uses the names we've generated to write strings for
+    reactions of this format.
+
+    Parameters
+    ----------
+    reaction_dict : dictionary
+        dictionary whose keys are "reactants" and "products" and whose values
+        are a list of mpculeids associated with a given reaction
+    mol_entry_id : dictionary
+        dictionary associating each mpculeid with its name for fast lookup
+
+    Returns
+    -------
+    rxn_eqn: string
+        the desired reaction written in the form: name1 + name2 => name3
+        + name4
+    """
     rxn_eqn = ""
     if len(reaction_dict["reactants"]) == 1:
         name = mpculid_dict[reaction_dict["reactants"][0]]
@@ -245,7 +264,9 @@ def write_reaction(reaction_dict, mpculid_dict): #convert to strings of the appr
 # print('Done!')
 
 start = time.time()
-        
+
+folder = input("Please input the name of the folder you wish to create: ")
+os.mkdir()      
 print('Loading mol_entries.pickle...')
 with open('mol_entries.pickle', 'rb') as f: #loads pymatgen Molecule objects from pickle file
     mol_entries = pickle.load(f)
@@ -324,7 +345,7 @@ else:
 index_dict = dict([(value, key) for key, value in key_dict.items()]) #want to look up name by index later
 reactions = []
 
-print('Converting reactions to named reactions...')
+print('Converting reactions containing names...')
 for reaction in third_entries["pathways"].keys():
     if third_entries["pathways"][reaction] > 500: #only add network products found >500 times
         for rxn in third_entries["reactions"].keys():
@@ -334,32 +355,36 @@ for reaction in third_entries["pathways"].keys():
 
 print('Done!')
 
-csv_dict = {}
+
 
 print('Writing reactions to csv file...')
-with open('Kinetiscope_rxn_template.csv', newline = "") as csvfile:
-    reader = csv.reader(csvfile)
-    fields = list(next(reader))
-    for reaction in reactions:
-        csv_dict['# equation'] = reaction
-        csv_dict['fwd_A'] = 1
-        csv_dict['fwd_temp_coeff'] = 0
-        csv_dict['fwd_Ea'] = 0
-        csv_dict['fwd_k'] = 10379761818429.5 #kT/h
-        csv_dict['rev_A'] = 1
-        csv_dict['rev_temp_coeff'] = 0
-        csv_dict['rev_Ea'] = 0
-        csv_dict['rev_k'] = 1
-        csv_dict['fwd_k0'] = 1
-        csv_dict['rev_k0'] = 1
-        csv_dict['alpha_alv'] = 0.5
-        csv_dict['equil_potential'] = 0.5
-        csv_dict['num_electrons'] = 0
-        csv_dict['fwd_prog_k'] = 1
-        csv_dict['rev_prog_k'] = 1
-        csv_dict['non_stoichiometric'] = 0
-        csv_dict['rate_constant_format'] = 0
-    writer = csv.DictWriter(csvfile, fieldnames = fields)
+# with open('Kinetiscope_rxn_template.csv', newline = "") as csvfile:
+#     # reader = csv.reader(csvfile)
+#     # fields = list(next(reader))
+csv_dict = {}
+
+for reaction in reactions:
+    csv_dict['# equation'] = reaction
+    csv_dict['fwd_A'] = 1
+    csv_dict['fwd_temp_coeff'] = 0
+    csv_dict['fwd_Ea'] = 0
+    csv_dict['fwd_k'] = 10379761818429.5 #kT/h
+    csv_dict['rev_A'] = 1
+    csv_dict['rev_temp_coeff'] = 0
+    csv_dict['rev_Ea'] = 0
+    csv_dict['rev_k'] = 1
+    csv_dict['fwd_k0'] = 1
+    csv_dict['rev_k0'] = 1
+    csv_dict['alpha_alv'] = 0.5
+    csv_dict['equil_potential'] = 0.5
+    csv_dict['num_electrons'] = 0
+    csv_dict['fwd_prog_k'] = 1
+    csv_dict['rev_prog_k'] = 1
+    csv_dict['non_stoichiometric'] = 0
+    csv_dict['rate_constant_format'] = 0
+
+with open('euvl_phase2_reactions.csv', newline = "") as csvfile:
+    writer = csv.DictWriter(csvfile, fieldnames = csv_dict.keys())
     writer.writeheader()
     # next(writer) #skip the first row, which already has the headers written
     writer.writerows(csv_dict)
@@ -373,6 +398,7 @@ time_min = total/60
 time_min = round(time_min, 2)
 print('named ', len(name_dict), 'molecules and took', time_min, ' minutes')
 
+print('Writing concentration text files...')    
 database = input("Please input the path of the sqlite3 database: ")
 
 initial_state_con = sqlite3.connect(database)
@@ -397,7 +423,7 @@ for name in name_dict.keys():
         to_write = numbers + str(rounded_concentration)
         f.write(to_write)
     
-
+print('Done!')
         # initial_state_array = np.zeros(
         #     self.number_of_species,
         #     dtype=int
