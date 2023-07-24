@@ -266,7 +266,10 @@ def write_reaction(reaction_dict, mpculid_dict): #convert to strings of the appr
 start = time.time()
 
 folder = input("Please input the name of the folder you wish to create: ")
-os.mkdir()      
+current_directory = os.getcwd()
+path = os.join(current_directory, folder)
+os.mkdir(path)
+
 print('Loading mol_entries.pickle...')
 with open('mol_entries.pickle', 'rb') as f: #loads pymatgen Molecule objects from pickle file
     mol_entries = pickle.load(f)
@@ -398,7 +401,8 @@ time_min = total/60
 time_min = round(time_min, 2)
 print('named ', len(name_dict), 'molecules and took', time_min, ' minutes')
 
-print('Writing concentration text files...')    
+print('Writing concentration text files...')   
+ 
 database = input("Please input the path of the sqlite3 database: ")
 
 initial_state_con = sqlite3.connect(database)
@@ -407,6 +411,12 @@ concentration_dict = {}
 
 for row in cur.execute(sql_get_initial_state):
      concentration_dict[row[0]] = row[1] #associates each species index with its particle count in that trajectory
+
+folder = "Concentration_files"
+current_directory = os.getcwd()
+path = os.join(current_directory, folder)
+os.mkdir(path)
+os.chdir(path)
 
 total_num_particles = sum(concentration_dict.values())
 numbers = "1 1 1 "
