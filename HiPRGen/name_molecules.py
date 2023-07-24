@@ -17,15 +17,19 @@ import copy
 import networkx as nx
 import time
 import csv
+import sqlite3
 
-#want to write the json we've created as a "key" showing names associated with
-#molecule graphs
-
-#want to write to an excel file reactions of the form: name1 + name2 -> name3+ name4
 
 """
 This module saves a json associating each molecule involved in relevent reactions
-with a unique name based on functional group present within that molecule.
+with a unique name based on functional group present within that molecule. It also
+writes an excel file for the desired reactions of the form name1 + name2 => name 3
++ name 4, calculates the relative concentrations of species from a given trajectory,
+and outputs those concentrations as text files. 
+"""
+
+sql_get_initial_state = """
+    SELECT * FROM initial_state;
 """
 
 def find_molecules_from_mpculeids(participants, mol_entries):
@@ -139,7 +143,7 @@ def functional_group_present(mol_graph, func):
     isomorphism = nx.isomorphism.GraphMatcher(mol_graph, func, node_match = nm)
     return isomorphism.subgraph_is_isomorphic(), isomorphism.subgraph_isomorphisms_iter()
 
-def stereoisomer_test(test_dict, mol_entry_id, mol_name):
+def stereoisomer_test(name_dict, mol_entry_id, mol_name):
     """
     Structural isomers--species with the same formula but different graphs--will return
     the same name under this paradigm. This function numbers each isomer such that the
@@ -147,7 +151,7 @@ def stereoisomer_test(test_dict, mol_entry_id, mol_name):
 
     Parameters
     ----------
-    test_dict : dictionary
+    name_dict : dictionary
         dictionary whose keys are names and values are entry_ids of the species
         associated with that name
     mol_entry_id : string
@@ -164,14 +168,14 @@ def stereoisomer_test(test_dict, mol_entry_id, mol_name):
 
     """
     stereos = {}
-    if mol_name in test_dict and mol_entry_id != test_dict[mol_name]: #i.e. if name already in dictionary but graphs of molecules are different
-        old_id = test_dict[mol_name]
+    if mol_name in name_dict and mol_entry_id != name_dict[mol_name]: #i.e. if name already in dictionary but graphs of molecules are different
+        old_id = name_dict[mol_name]
         name_1 = mol_name + '_#1'
         name_2 = mol_name + '_#2'
         stereos.update({name_1: old_id, name_2: mol_entry_id})
-    elif mol_name + '_#1' in test_dict and mol_entry_id != test_dict[mol_name + '_#1']: #i.e. if multiple stereoisomers are already in the dictionary
+    elif mol_name + '_#1' in name_dict and mol_entry_id != name_dict[mol_name + '_#1']: #i.e. if multiple stereoisomers are already in the dictionary
         current_max = 3
-        while mol_name + '_#' + str(current_max) in test_dict and mol_entry_id != test_dict[mol_name + '_#' + str(current_max)]:
+        while mol_name + '_#' + str(current_max) in name_dict and mol_entry_id != name_dict[mol_name + '_#' + str(current_max)]:
             current_max += 1
         new_name = mol_name + '_#' + str(current_max)
         stereos[new_name] = mol_entry_id
@@ -253,7 +257,7 @@ third_entries = loadfn(third_name + ".json")
 print('Done!')  
 
 # n = 0
-# test_dict = {}
+# name_dict = {}
 # entry_ids = set()
 # print('Naming Molecules...')
 # for reaction in third_entries["pathways"].keys():
@@ -265,12 +269,12 @@ print('Done!')
 #                     for molecule in l:
 #                         if molecule.entry_id not in entry_ids: #i.e. we haven't named this molecule yet
 #                             name = name_molecule(molecule, func_group_dict) 
-#                             if stereoisomer_test(test_dict, molecule.entry_id, name): #returns empty dict if no stereoisomers already in dict
-#                                 test_dict.update(stereoisomer_test(test_dict, molecule.entry_id, name))
-#                                 if len(stereoisomer_test(test_dict, molecule.entry_id, name)) == 2: #If two entries are returned, this means we've named two stereoisomers #1 and #2, and need to remove the duplicate name from the dict
-#                                     test_dict.pop(name)
+#                             if stereoisomer_test(name_dict, molecule.entry_id, name): #returns empty dict if no stereoisomers already in dict
+#                                 name_dict.update(stereoisomer_test(name_dict, molecule.entry_id, name))
+#                                 if len(stereoisomer_test(name_dict, molecule.entry_id, name)) == 2: #If two entries are returned, this means we've named two stereoisomers #1 and #2, and need to remove the duplicate name from the dict
+#                                     name_dict.pop(name)
 #                             else:
-#                                 test_dict[name] = molecule.entry_id
+#                                 name_dict[name] = molecule.entry_id
 #                             entry_ids.add(molecule.entry_id)
                                 
 
@@ -279,17 +283,17 @@ print('Done!')
 # total = end - start
 # time_min = total/60
 # time_min = round(time_min, 2)
-# print('named ', len(test_dict), 'molecules and took', time_min, ' minutes')
+# print('named ', len(name_dict), 'molecules and took', time_min, ' minutes')
 
-# dict_set = set(test_dict.values())
+# dict_set = set(name_dict.values())
 # if entry_ids.difference(dict_set):
 #     print('Unnamed molecule hashes: ', entry_ids.difference(dict_set))
         
 # l_list = []
     
 # print('Testing for duplicates...')
-# for name, h in test_dict.items(): 
-#     for na, ha in test_dict.items():
+# for name, h in name_dict.items(): 
+#     for na, ha in name_dict.items():
 #         if na == name and ha != h:
 #             l_list.append((ha, h))
 
@@ -298,18 +302,18 @@ print('Done!')
 #     print(l_list)
 # print('Done!') 
 
-test_dict = loadfn('named_molecules.json')
-mpculid_dict = dict([(value, key) for key, value in test_dict.items()]) #wanted to do this while generating the names, but can't because the names can change as we're building the dictionary
+name_dict = loadfn('named_molecules.json')
+mpculid_dict = dict([(value, key) for key, value in name_dict.items()]) #wanted to do this while generating the names, but can't because the names can change as we're building the dictionary
 
 key_dict = {} #consider printing a key instead if it seems necessary
-for name, mpculeid in test_dict.items():
+for name, mpculeid in name_dict.items():
     for species in mol_entries:
         if mpculeid == species.entry_id:
             key_dict[name] = species.ind
 
-if len(key_dict) != len(test_dict):
+if len(key_dict) != len(name_dict):
     print('Error: not all names associated with a molecule index')
-    for name in test_dict.keys():
+    for name in name_dict.keys():
         if not key_dict.get(name, False):
             print('Name not in key: ', name)
 else:
@@ -317,6 +321,7 @@ else:
     dumpfn(key_dict, 'name_index_key.json')
     print('Done!')
 
+index_dict = dict([(value, key) for key, value in key_dict.items()]) #want to look up name by index later
 reactions = []
 
 print('Converting reactions to named reactions...')
@@ -366,10 +371,51 @@ end = time.time()
 total = end - start
 time_min = total/60
 time_min = round(time_min, 2)
-print('named ', len(test_dict), 'molecules and took', time_min, ' minutes')
+print('named ', len(name_dict), 'molecules and took', time_min, ' minutes')
 
+database = input("Please input the path of the sqlite3 database: ")
+
+initial_state_con = sqlite3.connect(database)
+cur = initial_state_con.cursor()
+concentration_dict = {}
+
+for row in cur.execute(sql_get_initial_state):
+     concentration_dict[row[0]] = row[1] #associates each species index with its particle count in that trajectory
+
+total_num_particles = sum(concentration_dict.values())
+numbers = "1 1 1 "
+for name in name_dict.keys():
+    filename = name + ".txt"
+    with open(filename, "w") as f:
+        f.write("# column(x) row(y) layer(z) value")
+        f.write('\n')
+        name_index = key_dict[name]
+        species_particle_number = concentration_dict[name_index]
+        ratio = species_particle_number / total_num_particles
+        concentration = ratio * 8.08
+        rounded_concentration = round(concentration)
+        to_write = numbers + str(rounded_concentration)
+        f.write(to_write)
+    
+
+        # initial_state_array = np.zeros(
+        #     self.number_of_species,
+        #     dtype=int
+        # )
+
+        # for i in range(self.number_of_species):
+        #     initial_state_array[i] = initial_state_dict[i]
+
+        # if self.initial_state_dict == {} and self.initial_state_array == {}:
+        #     self.initial_state_dict = initial_state_dict
+        #     self.initial_state_array = initial_state_array
+        # else:
+        #     for i in range(self.number_of_species):
+        #         if initial_state_array[i] > self.initial_state_array[i]:
+        #             self.initial_state_array[i] = initial_state_array[i]
+        #             self.initial_state_dict[i] = initial_state_dict[i]
 #save to the excel file
-# dumpfn(test_dict, 'named_molecules.json')
+# dumpfn(name_dict, 'named_molecules.json')
 
 # print('Done! ', len(mpcule_ids), ' reactions total')
 
