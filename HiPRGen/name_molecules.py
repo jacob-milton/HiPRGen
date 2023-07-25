@@ -265,10 +265,10 @@ def write_reaction(reaction_dict, mpculid_dict): #convert to strings of the appr
 
 start = time.time()
 
-folder = input("Please input the name of the folder you wish to create: ")
-current_directory = os.getcwd()
-path = os.join(current_directory, folder)
-os.mkdir(path)
+# folder = input("Please input the name of the folder you wish to create: ")
+# current_directory = os.getcwd()
+# path = os.join(current_directory, folder)
+# os.mkdir(path)
 
 print('Loading mol_entries.pickle...')
 with open('mol_entries.pickle', 'rb') as f: #loads pymatgen Molecule objects from pickle file
@@ -351,10 +351,11 @@ reactions = []
 print('Converting reactions containing names...')
 for reaction in third_entries["pathways"].keys():
     if third_entries["pathways"][reaction] > 500: #only add network products found >500 times
-        for rxn in third_entries["reactions"].keys():
-            if str(reaction) == rxn:
-                named_reaction = write_reaction(third_entries["reactions"][rxn], mpculid_dict) #iterate through the desired reactions, and find the name from the mpcule id
-                reactions.append(named_reaction)
+        rxn = third_entries["reactions"][reaction]
+        # for rxn in third_entries["reactions"].keys():
+            # if str(reaction) == rxn:
+        named_reaction = write_reaction(rxn, mpculid_dict) #iterate through the desired reactions, and find the name from the mpcule id
+        reactions.append(named_reaction)
 
 print('Done!')
 
@@ -364,9 +365,12 @@ print('Writing reactions to csv file...')
 # with open('Kinetiscope_rxn_template.csv', newline = "") as csvfile:
 #     # reader = csv.reader(csvfile)
 #     # fields = list(next(reader))
-csv_dict = {}
+
+dict_list = []
+
 
 for reaction in reactions:
+    csv_dict = {}
     csv_dict['# equation'] = reaction
     csv_dict['fwd_A'] = 1
     csv_dict['fwd_temp_coeff'] = 0
@@ -385,14 +389,15 @@ for reaction in reactions:
     csv_dict['rev_prog_k'] = 1
     csv_dict['non_stoichiometric'] = 0
     csv_dict['rate_constant_format'] = 0
-
-with open('euvl_phase2_reactions.csv', newline = "") as csvfile:
-    writer = csv.DictWriter(csvfile, fieldnames = csv_dict.keys())
+    dict_list.append(csv_dict)
+    
+with open("euvl_phase2_reactions.csv", 'w', newline = "") as csvfile:
+    writer = csv.DictWriter(csvfile, fieldnames = dict_list[0].keys())
     writer.writeheader()
-    # next(writer) #skip the first row, which already has the headers written
-    writer.writerows(csv_dict)
+    for reaction in dict_list:
+        writer.writerow(reaction)
   
-print('Done!')      
+print('Done!')      #surprisingly writing the csv file
     # writer = csv.writer(csvfile)
 
 end = time.time()
