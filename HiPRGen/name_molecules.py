@@ -213,7 +213,10 @@ def write_reaction(reaction_dict, mpculid_dict): #convert to strings of the appr
         rxn_eqn = first_name + " + "
         second_reactant = reaction_dict["reactants"][1]
         second_name = mpculid_dict[second_reactant]
-        rxn_eqn = rxn_eqn + second_name + " "
+        if first_name == second_name:
+            rxn_eqn = "2" + first_name + " " #if reaction is A + A -> B + C we have to write 2A rather than A + A
+        else:
+            rxn_eqn = rxn_eqn + second_name + " "
     rxn_eqn = rxn_eqn + "=> "
     if len(reaction_dict["products"]) == 1:
         name = mpculid_dict[reaction_dict["products"][0]]
@@ -224,7 +227,10 @@ def write_reaction(reaction_dict, mpculid_dict): #convert to strings of the appr
          rxn_eqn = rxn_eqn + first_name + " + "
          second_product = reaction_dict["products"][1]
          second_name = mpculid_dict[second_product]
-         rxn_eqn = rxn_eqn + second_name
+         if first_name == second_name:
+             rxn_eqn = "2" + first_name #if reaction is A + A -> B + C we have to write 2A rather than A + A
+         else:
+             rxn_eqn = rxn_eqn + second_name
     return rxn_eqn
     
 # def generate_name_key(network_loader, key_dict, species_report_path):
@@ -257,10 +263,10 @@ def write_reaction(reaction_dict, mpculid_dict): #convert to strings of the appr
 #     dumpfn(data, path)
 
 start = time.time()
-# folder = input("Please input the name of the folder where you want to store your files: ")
-# original_directory = os.getcwd()
-# new_dir = os.path.join(original_directory, folder)
-# os.mkdir(new_dir)
+folder = input("Please input the name of the folder where you want to store your files: ")
+original_directory = os.getcwd()
+new_dir = os.path.join(original_directory, folder)
+os.mkdir(new_dir)
 
 print('Associating functional groups with their Molecule objects...')
 func_group_dict = {} #take a group of xyz files associated with our functional groups and generate a dictionary associating the molecule graph of that functional group with its name
@@ -374,6 +380,19 @@ for reaction in third_entries["pathways"].keys():
 
 print("Done naming molecules!")
 
+n = 0
+longest = 0
+
+for name in name_dict.keys():
+    if len(name) > 32:
+        n += 1
+        print(name)
+        if len(name) > longest:
+            longest = len(name)
+if longest > 0:  
+    print('Warning, ', n, 'too long names have been generated!' )
+    print('Longest length: ', longest)
+    
 dict_set = set(name_dict.values())
 if entry_ids.difference(dict_set):
     print('Unnamed molecule hashes: ', entry_ids.difference(dict_set))
@@ -385,7 +404,6 @@ for name, h in name_dict.items():
     for na, ha in name_dict.items():
         if na == name and ha != h:
             l_list.append((ha, h))
-
 
 if l_list:
     print('# of duplicate entries found: ', len(l_list))
@@ -409,9 +427,9 @@ if len(key_dict) != len(name_dict):
             print('Name not in key: ', name)
 else:
     print('Saving key json...')
-    # os.chdir(new_dir)
+    os.chdir(new_dir)
     dumpfn(key_dict, 'name_index_key.json')
-    # os.chdir(original_directory)
+    os.chdir(original_directory)
     print('Done!')
 
 index_dict = dict([(value, key) for key, value in key_dict.items()]) #want to look up name by index later
@@ -456,7 +474,9 @@ for reaction in reactions:
     csv_dict['non_stoichiometric'] = 0
     csv_dict['rate_constant_format'] = 0
     dict_list.append(csv_dict)
-  
+
+os.chdir(new_dir)
+    
 with open("euvl_phase2_reactions.csv", 'w', newline = "") as csvfile:
     writer = csv.DictWriter(csvfile, fieldnames = dict_list[0].keys())
     writer.writeheader()
@@ -467,6 +487,7 @@ print('Done!')
     # writer = csv.writer(csvfile)
 
 print('Writing concentration text files...')   
+os.chdir(original_directory)
  
 database = input("Please input the path of the sqlite3 database: ")
 
@@ -475,13 +496,15 @@ cur = initial_state_con.cursor()
 concentration_dict = {}
 
 for row in cur.execute(sql_get_initial_state):
-     concentration_dict[row[0]] = row[1] #associates each species index with its particle count in that trajectory
+      concentration_dict[row[0]] = row[1] #associates each species index with its particle count in that trajectory
 
-# folder = "Concentration_files"
+# # folder = "Concentration_files"
 # current_directory = os.getcwd()
 # path = os.join(current_directory, folder)
 # os.mkdir(path)
 # os.chdir(path)
+
+os.chdir(new_dir)
 
 total_num_particles = sum(concentration_dict.values())
 numbers = "1 1 1 "
