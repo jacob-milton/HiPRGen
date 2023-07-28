@@ -214,7 +214,9 @@ def write_reaction(reaction_dict, mpculid_dict): #convert to strings of the appr
         second_reactant = reaction_dict["reactants"][1]
         second_name = mpculid_dict[second_reactant]
         if first_name == second_name:
-            rxn_eqn = "2" + first_name + " " #if reaction is A + A -> B + C we have to write 2A rather than A + A
+            # print(first_name)
+            rxn_eqn = "2 " + first_name + " " #if reaction is A + A -> B + C we have to write 2A rather than A + A
+            # print(rxn_eqn)
         else:
             rxn_eqn = rxn_eqn + second_name + " "
     rxn_eqn = rxn_eqn + "=> "
@@ -224,13 +226,15 @@ def write_reaction(reaction_dict, mpculid_dict): #convert to strings of the appr
     else:
          first_product = reaction_dict["products"][0]
          first_name = mpculid_dict[first_product]
-         rxn_eqn = rxn_eqn + first_name + " + "
+         # rxn_eqn = rxn_eqn + first_name + " + "
          second_product = reaction_dict["products"][1]
          second_name = mpculid_dict[second_product]
          if first_name == second_name:
-             rxn_eqn = "2" + first_name #if reaction is A + A -> B + C we have to write 2A rather than A + A
+             # print(first_name)
+             rxn_eqn += "2 " + first_name #if reaction is A + A -> B + C we have to write 2A rather than A + A
+             # print(rxn_eqn)
          else:
-             rxn_eqn = rxn_eqn + second_name
+             rxn_eqn = rxn_eqn + first_name + " + " + second_name
     return rxn_eqn
     
 # def generate_name_key(network_loader, key_dict, species_report_path):
@@ -344,6 +348,7 @@ for dictionary in second_entries.values(): #iterates through each network produc
                 
 # print('Done! ', len(mpcule_ids), ' reactions total')
 
+print('Done!', len(reactions_added), 'added forming network products!')
 
 print('Opening json...')  
 third_name = 'reaction_tally'
@@ -370,7 +375,7 @@ for reaction in third_entries["pathways"].keys():
                             name_dict[name] = molecule.entry_id
                         entry_ids.add(molecule.entry_id)
                                 
-
+print('Done!', len(reactions_added), 'added!')
 # print('Done naming molecules!')
 # end = time.time()
 # total = end - start
