@@ -641,13 +641,13 @@ class Pathfinding:
     def compute_pathway(
             self,
             species_id,
-            trajectory):
-
+            trajectory): #trajectories is a dict defined in network_loader written with trajectories[seed][step] = (reaction_id, time)
+                         #so trajectory is likely an entry of a dictionary of that structure   
         pathway = []
         target_produced = False
 
         for step in trajectory:
-            reaction_id = trajectory[step][0]
+            reaction_id = trajectory[step][0] #trajectory[step] is a 2-tuple of the form (reaction_id, time)
             reaction = self.network_loader.index_to_reaction(reaction_id)
             if species_id in reaction['products']:
                 target_produced = True
@@ -660,11 +660,11 @@ class Pathfinding:
             prefixes = []
             for i in range(reaction['number_of_reactants']):
                 reactant_id = reaction['reactants'][i]
-                if self.network_loader.initial_state_dict[reactant_id] == 0:
-                    prefix = self.compute_pathway(reactant_id, trajectory)
+                if self.network_loader.initial_state_dict[reactant_id] == 0: #i.e. this is not a starting species
+                    prefix = self.compute_pathway(reactant_id, trajectory) #recursive call
                     prefixes.append(prefix)
 
-                    # early return if one of the final reaction in one
+                    # early return if one of the final reactions in one
                     # of the prefixes gives both of the reactants
                     prefix_final_reaction = self.network_loader.index_to_reaction(
                         prefix[-1])
