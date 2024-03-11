@@ -175,12 +175,12 @@ def render_reactions_which_fired_new_positions(network_loader, colors, path):
 
 class PathfindingTransfer:
     def __init__(self,pathfinding,threshold):
-        self.pathfinding = pathfinding
+        self.pathfinding = pathfinding #think this is a pathfinding object defined below
         self.threshold = threshold
 
     def __call__(self, species_id):
-        result = set()
-        pathways = self.pathfinding.compute_pathways(species_id)
+        result = set() #sets can't contain duplicates so the pathways here will be unique
+        pathways = self.pathfinding.compute_pathways(species_id) 
         pathways_sorted = sorted(pathways, key=lambda p: pathways[p]['weight'])
 
         for p in pathways_sorted[0:self.threshold]:
@@ -635,22 +635,22 @@ class Pathfinding:
     ):
 
         self.network_loader = network_loader
-        self.pathways = {}
+        self.pathways = {}                   
 
 
     def compute_pathway(
             self,
             species_id,
-            trajectory): #trajectories is a dict defined in network_loader written with trajectories[seed][step] = (reaction_id, time)
-                         #so trajectory is likely an entry of a dictionary of that structure   
+            trajectory): 
+
         pathway = []
         target_produced = False
 
-        for step in trajectory:
+        for step in trajectory: #trajectory contains every step that ocurred in a given RNMC run
             reaction_id = trajectory[step][0] #trajectory[step] is a 2-tuple of the form (reaction_id, time)
             reaction = self.network_loader.index_to_reaction(reaction_id)
-            if species_id in reaction['products']:
-                target_produced = True
+            if species_id in reaction['products']: #ends iteration after finding the reaction that first produced this as a product
+                target_produced = True 
                 break
 
         if target_produced:
@@ -658,10 +658,10 @@ class Pathfinding:
 
 
             prefixes = []
-            for i in range(reaction['number_of_reactants']):
+            for i in range(reaction['number_of_reactants']): #iterates through reactants in the reaction we found
                 reactant_id = reaction['reactants'][i]
                 if self.network_loader.initial_state_dict[reactant_id] == 0: #i.e. this is not a starting species
-                    prefix = self.compute_pathway(reactant_id, trajectory) #recursive call
+                    prefix = self.compute_pathway(reactant_id, trajectory)  #recursive step
                     prefixes.append(prefix)
 
                     # early return if one of the final reactions in one
@@ -669,7 +669,7 @@ class Pathfinding:
                     prefix_final_reaction = self.network_loader.index_to_reaction(
                         prefix[-1])
 
-                    if (sorted(reaction['reactants']) ==
+                    if (sorted(reaction['reactants']) == #I believe this is the base case
                         sorted(prefix_final_reaction['products'])):
                         return prefix + pathway
 
@@ -685,7 +685,7 @@ class Pathfinding:
 
         if species_id not in self.pathways:
             reaction_pathway_list = []
-            for seed in self.network_loader.trajectories:
+            for seed in self.network_loader.trajectories: #dict of the form: trajectories[seed][step] = (reaction_id, time)
                 pathway = self.compute_pathway(
                     species_id,
                     self.network_loader.trajectories[seed]
