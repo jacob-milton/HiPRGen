@@ -180,9 +180,9 @@ def li_test():
         mol_entries, "./xyz_files/Li.xyz", 1
     )
 
-    EC_id = find_mol_entry_from_xyz_and_charge(mol_entries, "./xyz_files/EC.xyz", 0)
+    EC_id = find_mol_entry_from_xyz_and_charge(mol_entries, "./xyz_files/EC.xyz", 0) #EC stands for ethylene carbonate
 
-    LEDC_id = find_mol_entry_from_xyz_and_charge(mol_entries, "./xyz_files/LEDC.xyz", 0)
+    LEDC_id = find_mol_entry_from_xyz_and_charge(mol_entries, "./xyz_files/LEDC.xyz", 0) #lithium ethylene dicarbonate
 
     # After generating a reaction network, it is stored in rn.sqlite. We
     # use Monte Carlo simulation to interrogate the network, and for that
@@ -251,7 +251,9 @@ def li_test():
     # of the target species to the report. The report can be sorted by
     # pathway frequency, but instead here we sort by pathway cost. Note
     # that the test network has ~5000 reactions while production networks
-    # have between 50-100 million reactions.
+    # have between 50-100 million reactions. This pathway_report object 
+    #generates a pathway report for the formation of lithium ethylene 
+    #dicarbonate.
     pathway_report(
         pathfinding, LEDC_id, folder + "/LEDC_pathways.tex", sort_by_frequency=False
     )
