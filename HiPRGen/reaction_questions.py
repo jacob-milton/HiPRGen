@@ -448,6 +448,62 @@ class reactant_and_product_not_isomorphic(MSONable):
         else:
             return False
 
+class remove_bad_electron_attachment(MSONable):
+    def __init__(self):
+        pass
+
+    def __str__(self):
+        return "unlikely electron attachment"
+
+    def __call__(self, reaction, mol_entries, params):
+        """
+        This reaction filter removes electron attachment reactions that are
+        unfeasible. Not all species form stable radicaL anions, and thus, 
+        this filter, as currently implemented, removes electron attachment 
+        reactions that occurs to any species that is neither a cation nor
+        open-shell.
+
+        Parameters
+        ----------
+        reaction : dict
+            the reaction we're testing
+        mol_entries : dict
+            dictionary containing all of the mol_entries in our current network
+        params : dict
+            dictionary containing optional parameters associated with a given reaction
+
+        Returns
+        -------
+        bool
+            True iff reaction is electron attachment to a species that is
+            neither a cation nor a radical
+
+        """
+        
+        if "electron_species" in params:
+
+            if reaction["number_of_reactants"] != 1 or reaction["number_of_products"] != 1:
+                return False
+            
+            reactant_charge = mol_entries[reaction["reactants"][0]].charge
+            product_charge = mol_entries[reaction["products"][0]].charge
+            
+            deltacharge = product_charge - reactant_charge
+
+            if deltacharge == -1:
+                
+                reactant_spin = mol_entries[reaction["reactants"][0]].spin_multiplicity
+                
+                reactant_not_cation = reactant_charge < 1
+                reactant_not_radical = reactant_spin != 2
+                
+                if reactant_not_cation or reactant_not_radical:
+                    return True
+                
+            return False
+        
+        else:
+            return False
 
 class reaction_default_true(MSONable):
     def __init__(self):
@@ -663,7 +719,6 @@ class reaction_is_covalent_decomposable(MSONable): # Remove A + B -> A + C, even
                 return False
 
         return False
-
 
 class reaction_is_radical_separation(MSONable):
     def __init__(self):
@@ -1359,6 +1414,7 @@ euvl_phase1_reaction_decision_tree = [
             (too_many_reactants_or_products(), Terminal.DISCARD),
             (dcharge_too_large(), Terminal.DISCARD),
             (reactant_and_product_not_isomorphic(), Terminal.DISCARD),
+            (remove_bad_electron_attachment(), Terminal.DISCARD)
             (add_electron_species(), Terminal.DISCARD),
             (dG_above_threshold(-float("inf"), "free_energy", 0.0), Terminal.KEEP),
             (reaction_default_true(), Terminal.DISCARD),
