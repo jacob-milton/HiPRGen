@@ -224,6 +224,28 @@ class is_redox_reaction(MSONable):
         return "is redox reaction"
 
     def __call__(self, reaction, mol_entries, params):
+        """
+        A reaction is termed "redox" if there is a change in charge from
+        reactants forming products. This method calculates the change in charge,
+        tags a reaction as redox or not by updating the reaction dict, and 
+        returns a boolean classifying the reaction as redox or not.
+
+        Parameters
+        ----------
+        reaction : dict
+            the dictionary with information associated with this reaction
+        mol_entries : dict
+            a dictionary containing mol_entrys generated in mol_entry.py as values
+            with assigned indicies as keys
+        params : TYPE
+            optional parameters passed to the call
+
+        Returns
+        -------
+        bool
+            True if reaction is redox, False otherwise
+
+        """
         # positive dCharge means electrons are lost
         dCharge = 0.0
 
@@ -253,11 +275,25 @@ class add_electron_species(MSONable):
         return "add electron species"
 
     def __call__(self, reaction, mol_entries, params):
+        """
+        Class method that adds electrons as reactants or products to "redox"
+        reactions. 
+        
+        params : dict
+            dictionary containing optional parameters related to a chemical
+            reaction.
+
+        Returns
+        -------
+        bool
+            always returns False
+
+        """
         if "electron_species" in params:
             # positive dCharge means electrons are lost
             dCharge = 0.0
 
-            if reaction["number_of_reactants"] != 1:
+            if reaction["number_of_reactants"] != 1: #seems redundant considering that we already removed these
                 return False
 
             if reaction["number_of_products"] != 1:
@@ -293,6 +329,15 @@ class too_many_reactants_or_products(MSONable):
         return "too many reactants or products"
 
     def __call__(self, reaction, mol_entries, params):
+        """
+
+        Returns
+        -------
+        bool
+            True if the number of reactants or products is greater than 1, False
+            otherwise
+
+        """
         if reaction["number_of_reactants"] != 1 or reaction["number_of_products"] != 1:
             return True
         else:
@@ -352,6 +397,16 @@ class dcharge_too_large(MSONable):
         return "change in charge is too large"
 
     def __call__(self, reaction, mol_entries, params):
+        """
+        We're looking for "redox reactions" that only change the charge of a
+        species by one. This tests for that
+
+        Returns
+        -------
+        bool
+            True if the change in charge is greater than 1, False otherwise.
+
+        """
         dCharge = 0.0
 
         for i in range(reaction["number_of_reactants"]):
@@ -441,6 +496,19 @@ class reactant_and_product_not_isomorphic(MSONable):
         return "reactants and products are not covalent isomorphic"
 
     def __call__(self, reaction, mol_entries, params):
+        """
+        We want our "redox" reactions to be reactions where a given species
+        gains or loses a single electron. Therefore, the reactant and product
+        should have the same molecular graphs, meaning they are isomorphic.
+        Two graphs having the same hash implies that they are isomorphic.
+
+        Returns
+        -------
+        bool
+            True if the reactant and product are not the same species with
+            different charges, False if they are.
+
+        """
         reactant = mol_entries[reaction["reactants"][0]]
         product = mol_entries[reaction["products"][0]]
         if reactant.covalent_hash != product.covalent_hash:
@@ -448,62 +516,62 @@ class reactant_and_product_not_isomorphic(MSONable):
         else:
             return False
 
-class remove_bad_electron_attachment(MSONable):
-    def __init__(self):
-        pass
+# class remove_bad_electron_attachment(MSONable):
+#     def __init__(self):
+#         pass
 
-    def __str__(self):
-        return "unlikely electron attachment"
+#     def __str__(self):
+#         return "unlikely electron attachment"
 
-    def __call__(self, reaction, mol_entries, params):
-        """
-        This reaction filter removes electron attachment reactions that are
-        unfeasible. Not all species form stable radicaL anions, and thus, 
-        this filter, as currently implemented, removes electron attachment 
-        reactions that occurs to any species that is neither a cation nor
-        open-shell.
+#     def __call__(self, reaction, mol_entries, params):
+#         """
+#         This reaction filter removes electron attachment reactions that are
+#         unfeasible. Not all species form stable radicaL anions, and thus, 
+#         this filter, as currently implemented, removes electron attachment 
+#         reactions that occurs to any species that is neither a cation nor
+#         open-shell.
 
-        Parameters
-        ----------
-        reaction : dict
-            the reaction we're testing
-        mol_entries : dict
-            dictionary containing all of the mol_entries in our current network
-        params : dict
-            dictionary containing optional parameters associated with a given reaction
+#         Parameters
+#         ----------
+#         reaction : dict
+#             the reaction we're testing
+#         mol_entries : dict
+#             dictionary containing all of the mol_entries in our current network
+#         params : dict
+#             dictionary containing optional parameters associated with a given reaction
 
-        Returns
-        -------
-        bool
-            True iff reaction is electron attachment to a species that is
-            neither a cation nor a radical
+#         Returns
+#         -------
+#         bool
+#             True iff reaction is electron attachment to a species that is
+#             neither a cation nor a radical
 
-        """
+#         """
         
-        if "electron_species" in params:
+#         if "electron_species" in params:
 
-            if reaction["number_of_reactants"] != 1 or reaction["number_of_products"] != 1:
-                return False
+#             if reaction["number_of_reactants"] != 1 or reaction["number_of_products"] != 1:
+#                 return False
             
-            reactant_charge = mol_entries[reaction["reactants"][0]].charge
-            product_charge = mol_entries[reaction["products"][0]].charge
+#             reactant_charge = mol_entries[reaction["reactants"][0]].charge
+#             product_charge = mol_entries[reaction["products"][0]].charge
             
-            deltacharge = product_charge - reactant_charge
+#             deltacharge = product_charge - reactant_charge
 
-            if deltacharge == -1:
+#             if deltacharge == -1:
                 
-                reactant_spin = mol_entries[reaction["reactants"][0]].spin_multiplicity
+#                 reactant_spin = mol_entries[reaction["reactants"][0]].spin_multiplicity
                 
-                reactant_not_cation = reactant_charge < 1
-                reactant_not_radical = reactant_spin != 2
+#                 reactant_not_cation = reactant_charge < 1
+#                 reactant_not_radical = reactant_spin != 2
                 
-                if reactant_not_cation or reactant_not_radical:
-                    return True
+#                 if reactant_not_cation or reactant_not_radical:
+#                     return True
                 
-            return False
+#             return False
         
-        else:
-            return False
+#         else:
+#             return False
 
 class reaction_default_true(MSONable):
     def __init__(self):
@@ -1409,15 +1477,16 @@ co2_reaction_decision_tree = [
 
 euvl_phase1_reaction_decision_tree = [
     (
-        is_redox_reaction(),
+        is_redox_reaction(), #branch explored if a given 
+                             #reaction has a net change in charge
         [
             (too_many_reactants_or_products(), Terminal.DISCARD),
             (dcharge_too_large(), Terminal.DISCARD),
             (reactant_and_product_not_isomorphic(), Terminal.DISCARD),
-            (remove_bad_electron_attachment(), Terminal.DISCARD)
             (add_electron_species(), Terminal.DISCARD),
-            (dG_above_threshold(-float("inf"), "free_energy", 0.0), Terminal.KEEP),
-            (reaction_default_true(), Terminal.DISCARD),
+            (dG_below_threshold(-0.30, "free_energy", 0.0), Terminal.KEEP), #-0.30 was determined to be the least exergonic spontaneous electron attachment in our systems
+            # (dG_above_threshold(-float("inf"), "free_energy", 0.0), Terminal.KEEP),
+            (reaction_default_true(), Terminal.DISCARD), #removes any reaction with dG > -0.30
         ],
     ),
     (dG_below_threshold(0.0, "free_energy", 0.0), Terminal.DISCARD),
