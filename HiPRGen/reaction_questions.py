@@ -237,7 +237,7 @@ class is_redox_reaction(MSONable):
         mol_entries : dict
             a dictionary containing mol_entrys generated in mol_entry.py as values
             with assigned indicies as keys
-        params : TYPE
+        params : dict
             optional parameters passed to the call
 
         Returns
@@ -424,6 +424,85 @@ class dcharge_too_large(MSONable):
         else:
             return False
 
+class remove_attachment_negative_ion(MSONable):
+    def __init__(self):
+        pass
+
+    def __str__(self):
+        return "reaction involves electron attachment to a negative ion"
+
+    def __call__(self, reaction, mol_entries, params):
+        """
+        Electron attachment to negative ions should be much slower than
+        attachment to neutral or positively charged species due to Coulomb
+        repulsion. This function determines if a given reaction is
+        such a reaction.
+
+        Parameters
+        ----------
+        reaction : dict
+            the dictionary with information associated with this reaction
+        mol_entries : dict
+            a dictionary containing mol_entrys generated in mol_entry.py as values
+            with assigned indicies as keys
+        params : dict
+            optional parameters passed to the call
+
+        Returns
+        -------
+        bool
+            True if reaction is electron attachment to a negative ion, False otherwise.
+        """
+        reactant_index = reaction["reactants"][0]
+        mol = mol_entries[reactant_index]
+
+        if mol.charge < 0:
+
+            return True
+
+        return False
+
+class remove_bad_electron_attachment(MSONable):
+    def __init__(self):
+        pass
+
+    def __str__(self):
+        return "electron attachment reaction is not exergonic\
+        enough"
+
+    def __call__(self, reaction, mol_entries, params):
+        """
+        Electron attachment to negative ions should be much slower than
+        attachment to neutral or positively charged species due to Coulomb
+        repulsion. This function determines if a given reaction is
+        such a reaction.
+
+        Parameters
+        ----------
+        reaction : dict
+            the dictionary with information associated with this reaction
+        mol_entries : dict
+            a dictionary containing mol_entrys generated in mol_entry.py as values
+            with assigned indicies as keys
+        params : dict
+            optional parameters passed to the call
+
+        Returns
+        -------
+        bool
+            True if reaction is electron attachment to a negative ion, False otherwise.
+        """
+        reaction_is_attachment = reaction["number_of_reactants"] == 2
+        print("reaction is attachment ", reaction_is_attachment)
+
+        dG_too_high = dG_above_threshold(-0.45, "free_energy", 0.0)
+        print("dG_too_high ", dG_too_high)
+
+        if reaction_is_attachment and dG_too_high:
+
+            return True
+
+        return False
 
 def marcus_barrier(reaction, mol_entries, params):
 
@@ -487,7 +566,6 @@ def marcus_barrier(reaction, mol_entries, params):
     reaction["marcus_barrier"] = dG_barrier
     return False
 
-
 class reactant_and_product_not_isomorphic(MSONable):
     def __init__(self):
         pass
@@ -515,63 +593,6 @@ class reactant_and_product_not_isomorphic(MSONable):
             return True
         else:
             return False
-
-# class remove_bad_electron_attachment(MSONable):
-#     def __init__(self):
-#         pass
-
-#     def __str__(self):
-#         return "unlikely electron attachment"
-
-#     def __call__(self, reaction, mol_entries, params):
-#         """
-#         This reaction filter removes electron attachment reactions that are
-#         unfeasible. Not all species form stable radicaL anions, and thus, 
-#         this filter, as currently implemented, removes electron attachment 
-#         reactions that occurs to any species that is neither a cation nor
-#         open-shell.
-
-#         Parameters
-#         ----------
-#         reaction : dict
-#             the reaction we're testing
-#         mol_entries : dict
-#             dictionary containing all of the mol_entries in our current network
-#         params : dict
-#             dictionary containing optional parameters associated with a given reaction
-
-#         Returns
-#         -------
-#         bool
-#             True iff reaction is electron attachment to a species that is
-#             neither a cation nor a radical
-
-#         """
-        
-#         if "electron_species" in params:
-
-#             if reaction["number_of_reactants"] != 1 or reaction["number_of_products"] != 1:
-#                 return False
-            
-#             reactant_charge = mol_entries[reaction["reactants"][0]].charge
-#             product_charge = mol_entries[reaction["products"][0]].charge
-            
-#             deltacharge = product_charge - reactant_charge
-
-#             if deltacharge == -1:
-                
-#                 reactant_spin = mol_entries[reaction["reactants"][0]].spin_multiplicity
-                
-#                 reactant_not_cation = reactant_charge < 1
-#                 reactant_not_radical = reactant_spin != 2
-                
-#                 if reactant_not_cation or reactant_not_radical:
-#                     return True
-                
-#             return False
-        
-#         else:
-#             return False
 
 class reaction_default_true(MSONable):
     def __init__(self):
@@ -1481,12 +1502,12 @@ euvl_phase1_reaction_decision_tree = [
                              #reaction has a net change in charge
         [
             (too_many_reactants_or_products(), Terminal.DISCARD),
+            (remove_attachment_negative_ion(), Terminal.DISCARD), #logged and working correctly
             (dcharge_too_large(), Terminal.DISCARD),
             (reactant_and_product_not_isomorphic(), Terminal.DISCARD),
             (add_electron_species(), Terminal.DISCARD),
-            (dG_below_threshold(-0.30, "free_energy", 0.0), Terminal.KEEP), #-0.30 was determined to be the least exergonic spontaneous electron attachment in our systems
-            # (dG_above_threshold(-float("inf"), "free_energy", 0.0), Terminal.KEEP),
-            (reaction_default_true(), Terminal.DISCARD), #removes any reaction with dG > -0.30
+            (remove_bad_electron_attachment(), Terminal.DISCARD),
+            (dG_above_threshold(-float("inf"), "free_energy", 0.0), Terminal.KEEP),
         ],
     ),
     (dG_below_threshold(0.0, "free_energy", 0.0), Terminal.DISCARD),
@@ -1536,9 +1557,11 @@ euvl_phase1_reaction_logging_tree = [
         is_redox_reaction(),
         [
             (too_many_reactants_or_products(), Terminal.DISCARD),
+            (remove_attachment_negative_ion(), Terminal.DISCARD),
             (dcharge_too_large(), Terminal.DISCARD),
             (reactant_and_product_not_isomorphic(), Terminal.DISCARD),
             (add_electron_species(), Terminal.DISCARD),
+            (remove_bad_electron_attachment(), Terminal.KEEP),
             (dG_above_threshold(-float("inf"), "free_energy", 0.0), Terminal.DISCARD),
             (reaction_default_true(), Terminal.DISCARD),
         ],
