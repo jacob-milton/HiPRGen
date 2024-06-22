@@ -462,46 +462,29 @@ class remove_attachment_negative_ion(MSONable):
 
         return False
 
-class remove_bad_electron_attachment(MSONable):
+class remove_bad_electron_attachment(MSONable): #think when we init we need to pass the params for dG_too_high
     def __init__(self):
         pass
 
     def __str__(self):
-        return "electron attachment reaction is not exergonic\
-        enough"
+        return "electron attachment reaction is not exergonic enough"
 
     def __call__(self, reaction, mol_entries, params):
-        """
-        Electron attachment to negative ions should be much slower than
-        attachment to neutral or positively charged species due to Coulomb
-        repulsion. This function determines if a given reaction is
-        such a reaction.
-
-        Parameters
-        ----------
-        reaction : dict
-            the dictionary with information associated with this reaction
-        mol_entries : dict
-            a dictionary containing mol_entrys generated in mol_entry.py as values
-            with assigned indicies as keys
-        params : dict
-            optional parameters passed to the call
-
-        Returns
-        -------
-        bool
-            True if reaction is electron attachment to a negative ion, False otherwise.
-        """
         reaction_is_attachment = reaction["number_of_reactants"] == 2
-        print("reaction is attachment ", reaction_is_attachment)
+        print(f"reaction_is_attachment: {reaction_is_attachment}")
 
-        dG_too_high = dG_above_threshold(-0.45, "free_energy", 0.0)
-        print("dG_too_high ", dG_too_high)
+        # Create an instance of dG_above_threshold
+        dG_above_threshold_instance = dG_above_threshold(-0.45, "free_energy", 0.0)
+
+        # Use the instance to check if dG is too high
+        dG_too_high = dG_above_threshold_instance(reaction, mol_entries, params)
+        print(f"dG_too_high: {dG_too_high}")
 
         if reaction_is_attachment and dG_too_high:
-
+            print("Both conditions are true, returning True")
             return True
 
+        print("Conditions not met, returning False")
         return False
 
 def marcus_barrier(reaction, mol_entries, params):
@@ -1501,7 +1484,7 @@ euvl_phase1_reaction_decision_tree = [
         is_redox_reaction(), #branch explored if a given 
                              #reaction has a net change in charge
         [
-            (too_many_reactants_or_products(), Terminal.DISCARD),
+            (too_many_reactants_or_products(), Terminal.DISCARD), #TODO separate out attachment reactions, call filters there
             (remove_attachment_negative_ion(), Terminal.DISCARD), #logged and working correctly
             (dcharge_too_large(), Terminal.DISCARD),
             (reactant_and_product_not_isomorphic(), Terminal.DISCARD),
