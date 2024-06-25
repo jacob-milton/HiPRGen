@@ -664,14 +664,17 @@ class Pathfinding:
                     prefix = self.compute_pathway(reactant_id, trajectory)  #recursive step
                     prefixes.append(prefix)
 
-                    # early return if one of the final reactions in one
+                    # alternative base case where one of the final reactions in one
                     # of the prefixes gives both of the reactants
+                    
                     prefix_final_reaction = self.network_loader.index_to_reaction(
                         prefix[-1])
 
-                    if (sorted(reaction['reactants']) == #I believe this is the base case
+                    if (sorted(reaction['reactants']) ==
                         sorted(prefix_final_reaction['products'])):
                         return prefix + pathway
+
+                #note that a particular reactant being a starting species is a base case for recursion in this function
 
             for prefix in prefixes:
                 pathway = prefix + pathway
