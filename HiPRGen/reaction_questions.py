@@ -1484,8 +1484,8 @@ euvl_phase1_reaction_decision_tree = [
             (dcharge_too_large(), Terminal.DISCARD),
             (reactant_and_product_not_isomorphic(), Terminal.DISCARD),
             (add_electron_species(), Terminal.DISCARD),
-            (dG_below_threshold(-0.30, "free_energy", 0.0), Terminal.KEEP), #-0.30 was determined to be the least exergonic spontaneous electron attachment in our systems
-            # (dG_above_threshold(-float("inf"), "free_energy", 0.0), Terminal.KEEP),
+            # (dG_below_threshold(-0.30, "free_energy", 0.0), Terminal.KEEP), #-0.30 was determined to be the least exergonic spontaneous electron attachment in our systems
+            (dG_above_threshold(-float("inf"), "free_energy", 0.0), Terminal.KEEP),
             (reaction_default_true(), Terminal.DISCARD), #removes any reaction with dG > -0.30
         ],
     ),
@@ -1506,7 +1506,7 @@ euvl_phase1_reaction_decision_tree = [
                 [
                     (not_h_transfer(), Terminal.DISCARD),
                     (h_abstraction_from_closed_shell_reactant(), Terminal.DISCARD),
-                    (h_minus_abstraction(), Terminal.DISCARD),
+                    (h_minus_abstraction(), Terminal.DISCARD), #need to add a test here for dcharge being too large
                     (dG_above_threshold(0.0, "free_energy", 0.0, 0.1), Terminal.KEEP),
                     (reaction_default_true(), Terminal.DISCARD),
                 ],
@@ -1560,7 +1560,7 @@ euvl_phase1_reaction_logging_tree = [
                 [
                     (not_h_transfer(), Terminal.DISCARD),
                     (h_abstraction_from_closed_shell_reactant(), Terminal.DISCARD),
-                    (h_minus_abstraction(), Terminal.DISCARD),
+                    (h_minus_abstraction(), Terminal.KEEP),
                     (dG_above_threshold(0.0, "free_energy", 0.0, 0.1), Terminal.DISCARD),
                     (reaction_default_true(), Terminal.DISCARD),
                 ],
@@ -1588,7 +1588,7 @@ euvl_phase2_reaction_decision_tree = [
     (is_redox_reaction(), Terminal.DISCARD),
     (dG_above_threshold(0.0, "free_energy", 0.0), Terminal.DISCARD),
     (reactants_are_both_anions_or_both_cations(), Terminal.DISCARD),
-    (reaction_is_charge_transfer(), Terminal.KEEP),
+    (reaction_is_charge_transfer(), Terminal.DISCARD),
     (reaction_is_covalent_charge_decomposable(), Terminal.DISCARD),
     (reaction_is_coupled_electron_fragment_transfer(), Terminal.DISCARD),
     (star_count_diff_above_threshold(6), Terminal.DISCARD),
@@ -1602,10 +1602,11 @@ euvl_phase2_reaction_decision_tree = [
                 reaction_is_covalent_decomposable(),
                 [
                     (fragments_are_not_2A_B(), Terminal.DISCARD),
-                    (reaction_default_true(), Terminal.KEEP),
+                    (reaction_default_true(), Terminal.DISCARD),
                 ],
             ),
-            (reaction_default_true(), Terminal.KEEP),
+            (reaction_default_true(), Terminal.DISCARD
+             ),
         ],
     ),
     (reaction_default_true(), Terminal.DISCARD),

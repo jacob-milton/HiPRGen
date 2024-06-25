@@ -512,7 +512,7 @@ nonmetal_species_decision_tree = [
 
 euvl_species_decision_tree = [
     (fix_hydrogen_bonding(), Terminal.KEEP),
-    (h_atom_filter(), Terminal.DISCARD), #do we want to keep this? 
+    (h_atom_filter(), Terminal.DISCARD), #remove this, we want intermediates
     (oh_plus_filter(), Terminal.DISCARD), #want to get rid of this
     (compute_graph_hashes, Terminal.KEEP),
     (add_star_hashes(), Terminal.KEEP),
