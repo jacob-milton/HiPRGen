@@ -424,68 +424,95 @@ class dcharge_too_large(MSONable):
         else:
             return False
 
-class remove_attachment_negative_ion(MSONable):
+class is_attachment(MSONable):
     def __init__(self):
         pass
 
     def __str__(self):
-        return "reaction involves electron attachment to a negative ion"
+        return "is attachment reaction"
 
     def __call__(self, reaction, mol_entries, params):
-        """
-        Electron attachment to negative ions should be much slower than
-        attachment to neutral or positively charged species due to Coulomb
-        repulsion. This function determines if a given reaction is
-        such a reaction.
+        # positive dCharge means electrons are lost, negative gained
+        dCharge = 0.0
 
-        Parameters
-        ----------
-        reaction : dict
-            the dictionary with information associated with this reaction
-        mol_entries : dict
-            a dictionary containing mol_entrys generated in mol_entry.py as values
-            with assigned indicies as keys
-        params : dict
-            optional parameters passed to the call
-
-        Returns
-        -------
-        bool
-            True if reaction is electron attachment to a negative ion, False otherwise.
-        """
-        reactant_index = reaction["reactants"][0]
+        reactant_index = reaction["reactants"][0] #non-electron species
         mol = mol_entries[reactant_index]
+        dCharge -= mol.charge
+        
+        product_index = reaction["products"][0] #non-electron species
+        mol = mol_entries[product_index]
+        dCharge += mol.charge
 
-        if mol.charge < 0:
-
+        if dCharge < 0:
+            reaction["is_attachment"] = True
             return True
-
+        
+        reaction["is_attachment"] = False
+        
         return False
+        
+# class remove_attachment_negative_ion(MSONable):
+#     def __init__(self):
+#         pass
 
-class remove_bad_electron_attachment(MSONable): #think when we init we need to pass the params for dG_too_high
-    def __init__(self):
-        pass
+#     def __str__(self):
+#         return "reaction involves electron attachment to a negative ion"
 
-    def __str__(self):
-        return "electron attachment reaction is not exergonic enough"
+#     def __call__(self, reaction, mol_entries, params):
+#         """
+#         Electron attachment to negative ions should be much slower than
+#         attachment to neutral or positively charged species due to Coulomb
+#         repulsion. This function determines if a given reaction is
+#         such a reaction.
 
-    def __call__(self, reaction, mol_entries, params):
-        reaction_is_attachment = reaction["number_of_reactants"] == 2
-        print(f"reaction_is_attachment: {reaction_is_attachment}")
+#         Parameters
+#         ----------
+#         reaction : dict
+#             the dictionary with information associated with this reaction
+#         mol_entries : dict
+#             a dictionary containing mol_entrys generated in mol_entry.py as values
+#             with assigned indicies as keys
+#         params : dict
+#             optional parameters passed to the call
 
-        # Create an instance of dG_above_threshold
-        dG_above_threshold_instance = dG_above_threshold(-0.45, "free_energy", 0.0)
+#         Returns
+#         -------
+#         bool
+#             True if reaction is electron attachment to a negative ion, False otherwise.
+#         """
+#         reactant_index = reaction["reactants"][0]
+#         mol = mol_entries[reactant_index]
 
-        # Use the instance to check if dG is too high
-        dG_too_high = dG_above_threshold_instance(reaction, mol_entries, params)
-        print(f"dG_too_high: {dG_too_high}")
+#         if mol.charge < 0:
 
-        if reaction_is_attachment and dG_too_high:
-            print("Both conditions are true, returning True")
-            return True
+#             return True
 
-        print("Conditions not met, returning False")
-        return False
+#         return False
+
+# class remove_bad_electron_attachment(MSONable): #think when we init we need to pass the params for dG_too_high
+#     def __init__(self):
+#         pass
+
+#     def __str__(self):
+#         return "electron attachment reaction is not exergonic enough"
+
+#     def __call__(self, reaction, mol_entries, params):
+#         reaction_is_attachment = reaction["number_of_reactants"] == 2
+#         print(f"reaction_is_attachment: {reaction_is_attachment}")
+
+#         # Create an instance of dG_above_threshold
+#         dG_above_threshold_instance = dG_above_threshold(-0.45, "free_energy", 0.0)
+
+#         # Use the instance to check if dG is too high
+#         dG_too_high = dG_above_threshold_instance(reaction, mol_entries, params)
+#         print(f"dG_too_high: {dG_too_high}")
+
+#         if reaction_is_attachment and dG_too_high:
+#             print("Both conditions are true, returning True")
+#             return True
+
+#         print("Conditions not met, returning False")
+#         return False
 
 def marcus_barrier(reaction, mol_entries, params):
 
@@ -1481,16 +1508,22 @@ co2_reaction_decision_tree = [
 
 euvl_phase1_reaction_decision_tree = [
     (
-        is_redox_reaction(), #branch explored if a given 
-                             #reaction has a net change in charge
+        is_redox_reaction(),
         [
-            (too_many_reactants_or_products(), Terminal.DISCARD), #TODO separate out attachment reactions, call filters there
-            (remove_attachment_negative_ion(), Terminal.DISCARD), #logged and working correctly
+            (too_many_reactants_or_products(), Terminal.DISCARD),
             (dcharge_too_large(), Terminal.DISCARD),
             (reactant_and_product_not_isomorphic(), Terminal.DISCARD),
             (add_electron_species(), Terminal.DISCARD),
-            (remove_bad_electron_attachment(), Terminal.DISCARD),
+            (
+                is_attachment(),Terminal.DISCARD
+                # [
+                #     # (has_dianion_product(), Terminal.DISCARD),
+                #     # (dG_above_threshold(-0.45, "free_energy", 0.0), Terminal.DISCARD),
+                #     # (reaction_default_true(), Terminal.DISCARD),
+                # ]
+            ),
             (dG_above_threshold(-float("inf"), "free_energy", 0.0), Terminal.KEEP),
+            (reaction_default_true(), Terminal.DISCARD),
         ],
     ),
     (dG_below_threshold(0.0, "free_energy", 0.0), Terminal.DISCARD),
@@ -1540,11 +1573,13 @@ euvl_phase1_reaction_logging_tree = [
         is_redox_reaction(),
         [
             (too_many_reactants_or_products(), Terminal.DISCARD),
-            (remove_attachment_negative_ion(), Terminal.DISCARD),
             (dcharge_too_large(), Terminal.DISCARD),
             (reactant_and_product_not_isomorphic(), Terminal.DISCARD),
             (add_electron_species(), Terminal.DISCARD),
-            (remove_bad_electron_attachment(), Terminal.KEEP),
+            (
+                is_attachment(),Terminal.KEEP
+                # (reaction_default_true(), Terminal.KEEP),
+            ),
             (dG_above_threshold(-float("inf"), "free_energy", 0.0), Terminal.DISCARD),
             (reaction_default_true(), Terminal.DISCARD),
         ],
