@@ -75,8 +75,9 @@ def run_decision_tree(
     while type(node) == list:
         next_node = None
         for (question, new_node) in node:
+            # if isinstance(question, is_attachment):
+            #         print(f"returns {question(reaction, mol_entries, params)}")
             if question(reaction, mol_entries, params):
-
                 # if decision_pathway is a list,
                 # append the question which
                 # answered true i.e the edge we follow
@@ -451,43 +452,43 @@ class is_attachment(MSONable):
         
         return False
         
-# class remove_attachment_negative_ion(MSONable):
-#     def __init__(self):
-#         pass
+class to_negative_ion(MSONable):
+    def __init__(self):
+        pass
 
-#     def __str__(self):
-#         return "reaction involves electron attachment to a negative ion"
+    def __str__(self):
+        return "reaction involves electron attachment to a negative ion"
 
-#     def __call__(self, reaction, mol_entries, params):
-#         """
-#         Electron attachment to negative ions should be much slower than
-#         attachment to neutral or positively charged species due to Coulomb
-#         repulsion. This function determines if a given reaction is
-#         such a reaction.
+    def __call__(self, reaction, mol_entries, params):
+        """
+        Electron attachment to negative ions should be much slower than
+        attachment to neutral or positively charged species due to Coulomb
+        repulsion. This function determines if a given reaction is
+        such a reaction.
 
-#         Parameters
-#         ----------
-#         reaction : dict
-#             the dictionary with information associated with this reaction
-#         mol_entries : dict
-#             a dictionary containing mol_entrys generated in mol_entry.py as values
-#             with assigned indicies as keys
-#         params : dict
-#             optional parameters passed to the call
+        Parameters
+        ----------
+        reaction : dict
+            the dictionary with information associated with this reaction
+        mol_entries : dict
+            a dictionary containing mol_entrys generated in mol_entry.py as values
+            with assigned indicies as keys
+        params : dict
+            optional parameters passed to the call
 
-#         Returns
-#         -------
-#         bool
-#             True if reaction is electron attachment to a negative ion, False otherwise.
-#         """
-#         reactant_index = reaction["reactants"][0]
-#         mol = mol_entries[reactant_index]
+        Returns
+        -------
+        bool
+            True if reaction is electron attachment to a negative ion, False otherwise.
+        """
+        reactant_index = reaction["reactants"][0]
+        mol = mol_entries[reactant_index]
 
-#         if mol.charge < 0:
+        # if mol.charge < 0:
 
-#             return True
+        return True
 
-#         return False
+        # return False
 
 # class remove_bad_electron_attachment(MSONable): #think when we init we need to pass the params for dG_too_high
 #     def __init__(self):
@@ -1513,18 +1514,21 @@ euvl_phase1_reaction_decision_tree = [
             (too_many_reactants_or_products(), Terminal.DISCARD),
             (dcharge_too_large(), Terminal.DISCARD),
             (reactant_and_product_not_isomorphic(), Terminal.DISCARD),
-            (add_electron_species(), Terminal.DISCARD),
             (
-                is_attachment(),Terminal.DISCARD
-                # [
-                #     # (has_dianion_product(), Terminal.DISCARD),
-                #     # (dG_above_threshold(-0.45, "free_energy", 0.0), Terminal.DISCARD),
-                #     # (reaction_default_true(), Terminal.DISCARD),
-                # ]
+                is_attachment(),
+                [
+
+                    (to_negative_ion(), Terminal.DISCARD),
+                    (dG_above_threshold(-0.45, "free_energy", 0.0), Terminal.DISCARD),
+                    (add_electron_species(), Terminal.DISCARD),
+                    (dG_above_threshold(-float("inf"), "free_energy", 0.0), Terminal.KEEP),
+                    (reaction_default_true(), Terminal.DISCARD),
+                ]
             ),
+            (add_electron_species(), Terminal.DISCARD),
             (dG_above_threshold(-float("inf"), "free_energy", 0.0), Terminal.KEEP),
             (reaction_default_true(), Terminal.DISCARD),
-        ],
+        ]
     ),
     (dG_below_threshold(0.0, "free_energy", 0.0), Terminal.DISCARD),
     (
@@ -1575,15 +1579,22 @@ euvl_phase1_reaction_logging_tree = [
             (too_many_reactants_or_products(), Terminal.DISCARD),
             (dcharge_too_large(), Terminal.DISCARD),
             (reactant_and_product_not_isomorphic(), Terminal.DISCARD),
-            (add_electron_species(), Terminal.DISCARD),
             (
-                is_attachment(),Terminal.KEEP
-                # (reaction_default_true(), Terminal.KEEP),
+                is_attachment(),
+                [
+                    (to_negative_ion(), Terminal.KEEP),
+                    (dG_above_threshold(-0.45, "free_energy", 0.0), Terminal.DISCARD),
+                    (add_electron_species(), Terminal.DISCARD), #currently can't log after we do this
+                    (dG_above_threshold(-float("inf"), "free_energy", 0.0), Terminal.DISCARD),
+                    (reaction_default_true(), Terminal.DISCARD),
+                ]
             ),
+            (add_electron_species(), Terminal.DISCARD),
             (dG_above_threshold(-float("inf"), "free_energy", 0.0), Terminal.DISCARD),
             (reaction_default_true(), Terminal.DISCARD),
-        ],
+        ]
     ),
+
     (dG_below_threshold(0.0, "free_energy", 0.0), Terminal.DISCARD),
     (
         more_than_one_reactant(), 
