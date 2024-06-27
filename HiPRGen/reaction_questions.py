@@ -433,6 +433,25 @@ class is_attachment(MSONable):
         return "is attachment reaction"
 
     def __call__(self, reaction, mol_entries, params):
+        """
+        Determines whether or not a given reaction is an electron attachment
+        reaction
+
+        Parameters
+        ----------
+        reaction : dict
+            dictionary of the form: {"reactants":tuple, "products":tuple}
+        mol_entries : dict
+            dictionary of all mol_entries where the keys are their indicies
+        params : dict
+            dictionary containing optional parameters
+
+        Returns
+        -------
+        bool
+            True is reaction is attachment, False otherwise
+
+        """
         # positive dCharge means electrons are lost, negative gained
         dCharge = 0.0
 
@@ -445,12 +464,16 @@ class is_attachment(MSONable):
         dCharge += mol.charge
 
         if dCharge < 0:
+            
             reaction["is_attachment"] = True
+            
             return True
         
-        reaction["is_attachment"] = False
-        
-        return False
+        else:
+            
+            reaction["is_attachment"] = False
+            
+            return False
         
 class to_negative_ion(MSONable):
     def __init__(self):
@@ -462,7 +485,7 @@ class to_negative_ion(MSONable):
     def __call__(self, reaction, mol_entries, params):
         """
         Electron attachment to negative ions should be much slower than
-        attachment to neutral or positively charged species due to Coulomb
+        attachment to neutral or positively charged species due to Coulombic
         repulsion. This function determines if a given reaction is
         such a reaction.
 
@@ -481,39 +504,18 @@ class to_negative_ion(MSONable):
         bool
             True if reaction is electron attachment to a negative ion, False otherwise.
         """
-        reactant_index = reaction["reactants"][0]
+        
+        reactant_index = reaction["reactants"][0] #index of the non-electron
+                                                  #reactant
         mol = mol_entries[reactant_index]
 
-        # if mol.charge < 0:
+        if mol.charge < 0:
 
-        return True
-
-        # return False
-
-# class remove_bad_electron_attachment(MSONable): #think when we init we need to pass the params for dG_too_high
-#     def __init__(self):
-#         pass
-
-#     def __str__(self):
-#         return "electron attachment reaction is not exergonic enough"
-
-#     def __call__(self, reaction, mol_entries, params):
-#         reaction_is_attachment = reaction["number_of_reactants"] == 2
-#         print(f"reaction_is_attachment: {reaction_is_attachment}")
-
-#         # Create an instance of dG_above_threshold
-#         dG_above_threshold_instance = dG_above_threshold(-0.45, "free_energy", 0.0)
-
-#         # Use the instance to check if dG is too high
-#         dG_too_high = dG_above_threshold_instance(reaction, mol_entries, params)
-#         print(f"dG_too_high: {dG_too_high}")
-
-#         if reaction_is_attachment and dG_too_high:
-#             print("Both conditions are true, returning True")
-#             return True
-
-#         print("Conditions not met, returning False")
-#         return False
+            return True
+        
+        else:
+            
+            return False
 
 def marcus_barrier(reaction, mol_entries, params):
 
@@ -1519,7 +1521,7 @@ euvl_phase1_reaction_decision_tree = [
                 [
 
                     (to_negative_ion(), Terminal.DISCARD),
-                    (dG_above_threshold(-0.45, "free_energy", 0.0), Terminal.DISCARD),
+                    (dG_above_threshold(-0.44, "free_energy", 0.0), Terminal.DISCARD), #-0.45 is the least exergonic electron attachment reaction we allow
                     (add_electron_species(), Terminal.DISCARD),
                     (dG_above_threshold(-float("inf"), "free_energy", 0.0), Terminal.KEEP),
                     (reaction_default_true(), Terminal.DISCARD),
@@ -1582,10 +1584,10 @@ euvl_phase1_reaction_logging_tree = [
             (
                 is_attachment(),
                 [
-                    (to_negative_ion(), Terminal.KEEP),
-                    (dG_above_threshold(-0.45, "free_energy", 0.0), Terminal.DISCARD),
-                    (add_electron_species(), Terminal.DISCARD), #currently can't log after we do this
+                    (to_negative_ion(), Terminal.DISCARD),
+                    (dG_above_threshold(-0.44, "free_energy", 0.0), Terminal.DISCARD),
                     (dG_above_threshold(-float("inf"), "free_energy", 0.0), Terminal.DISCARD),
+                    (add_electron_species(), Terminal.DISCARD), #currently can't log after we do this
                     (reaction_default_true(), Terminal.DISCARD),
                 ]
             ),
