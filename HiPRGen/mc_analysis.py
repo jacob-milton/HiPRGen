@@ -643,29 +643,28 @@ class Pathfinding:
             species_id,
             trajectory): 
 
-        pathway = []
+        pathway = [] #will be a list of reaction_ids
         target_produced = False
 
         for step in trajectory: #trajectory contains every step that ocurred in a given RNMC run
-            reaction_id = trajectory[step][0] #trajectory[step] is a 2-tuple of the form (reaction_id, time)
+            reaction_id = trajectory[step][0] 
             reaction = self.network_loader.index_to_reaction(reaction_id)
-            if species_id in reaction['products']: #ends iteration after finding the reaction that first produced this as a product
+            if species_id in reaction['products']: #ends iteration after finding the reaction that first produced this species as a product
                 target_produced = True 
                 break
 
         if target_produced:
             pathway.append(reaction_id)
 
-
             prefixes = []
             for i in range(reaction['number_of_reactants']): #iterates through reactants in the reaction we found
                 reactant_id = reaction['reactants'][i]
                 if self.network_loader.initial_state_dict[reactant_id] == 0: #i.e. this is not a starting species
-                    prefix = self.compute_pathway(reactant_id, trajectory)  #recursive step
+                    prefix = self.compute_pathway(reactant_id, trajectory)  #recursive step, returns pathways forming this reactant
                     prefixes.append(prefix)
 
-                    # alternative base case where one of the final reactions in one
-                    # of the prefixes gives both of the reactants
+                    # alternative base case where the products of a prefix reaction
+                    # are the reactants of our reaction
                     
                     prefix_final_reaction = self.network_loader.index_to_reaction(
                         prefix[-1])
@@ -674,11 +673,11 @@ class Pathfinding:
                         sorted(prefix_final_reaction['products'])):
                         return prefix + pathway
 
-                #note that a particular reactant being a starting species is a base case for recursion in this function
+                #if a species IS a starting species, we don't do the recursive step
+                #because there is no pathway to forming it
 
             for prefix in prefixes:
                 pathway = prefix + pathway
-
 
         return pathway
 
