@@ -5,3 +5,4 @@ HiPRGen/euvl_TSreactions_041823.json
 HiPRGen/name_molecules.py
 HiPRGen/extract_reactions.py
 HiPRGen/mol_entry_TPStest.py
+HiPRGen/new_extract_rxns.py
