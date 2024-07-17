@@ -25,8 +25,9 @@ params is a dict:
         params = { 'temperature',
                    'electron_free_energy' }
 
-The lists of reactant and product indices always have length two. We
-use -1 when there is a only a single reactant or product.
+The lists of reactant and product indices always have length two as the
+SQLite DB has fixed dimensions. Thus, we use -1 as a placeholder when there is
+only a single reactant or product.
 
 The questions can also set reaction['rate'] and reaction['dG']
 
@@ -1449,92 +1450,62 @@ class reaction_is_hindered(MSONable):
 
         return False
 
-class is_neutral_unimolecular_atom_shift(MSONable):
+class neutral_single_reactant_single_product(MSONable):
     def __init__(self):
         pass
 
     def __str__(self):
-        return "reaction is neutral unimolecular atom shift"
+        return "neutral single reactant single product reaction"
 
     def __call__(self, reaction, mol_entries, params):
+        """
+        Removes reactions that involve the shift of atoms or groups between
+        positions in a neutral species. An example is keto-enol tautomerization;
+        these reactions are bimolecular in real systems, and thus we remove
+        their unimolecular equivalents.
+
+        Parameters
+        ----------
+        reaction : dict
+            the dictionary with information associated with this reaction
+        mol_entries : dict
+            a dictionary containing mol_entrys generated in mol_entry.py as values
+            with assigned indicies as keys
+        params : dict
+            optional parameters passed to the call, not used here
+
+        Returns
+        -------
+        bool
+            True if reaction is neutral, unimolecular atom/group shift
+
+        """
         
         if reaction["number_of_reactants"] != 1 or reaction["number_of_products"] != 1:
             
             return False
         
-        reactant_index = reaction["reactants"][0]
-        product_index = reaction["products"][0]
-        reactant_mol_entry = mol_entries[reactant_index]
-        product_mol_entry = mol_entries[product_index]
+        real_reactant_index = reaction["reactants"][0]
+        real_product_index = reaction["products"][0]
+        reactant_mol_entry = mol_entries[real_reactant_index]
+        product_mol_entry = mol_entries[real_product_index]
         
         reactant_charge = reactant_mol_entry.charge
         reactant_spin = reactant_mol_entry.spin_multiplicity
         product_charge = product_mol_entry.charge
         product_spin = product_mol_entry.spin_multiplicity
         
-        charges_are_zero = reactant_charge == product_charge and reactant_charge == 0
-        spins_are_one = reactant_spin == product_spin and reactant_spin == 1
+        reactant_and_product_neutral = \
+            reactant_charge == product_charge and reactant_charge == 0
+            
+        reactant_and_product_closed_shell  = \
+            reactant_spin == product_spin and reactant_spin == 1
         
-        if charges_are_zero and spins_are_one:
+        if reactant_and_product_neutral and reactant_and_product_closed_shell:
             
-            return True
-            
-        else:
-           print(f"Reactant Charge: {reactant_charge}")
-           print(f"Reactant Spin: {reactant_spin}")
-           print(f"Product Charge: {product_charge}")
-           print(f"Product Spin: {product_spin}") 
-           print('')
+            return True 
            
         return False
-    
-        # hot_reactant_atoms = []
-
-        # for l in reaction["reactant_bonds_broken"]: #finds the indicies for the atoms in the broken bond
-        #     for t in l:
-        #         hot_reactant = mol_entries[reaction["reactants"][t[0]]]
-        #         hot_reactant_atoms.append(t[1])
-
-        # hot_product_atoms = []
-
-        # for l in reaction["product_bonds_broken"]: #finds the indicies for the atoms in the formed bond
-        #     for t in l:
-        #         hot_product = mol_entries[reaction["products"][t[0]]]
-        #         hot_product_atoms.append(t[1])
-
-        # reaction_methyl_test = []
-        # reactant_num_carbon_neighbors = 0
-        # for atom in hot_reactant_atoms:
-        #     reactant_num_hydrogens = 0
-        #     if hot_reactant.mol_graph.get_coordination_of_site(atom) == 4: #only care about sp3 hybidized carbons
-        #         neighbor_list = hot_reactant.mol_graph.get_connected_sites(atom)
-        #         for neighbor in neighbor_list:
-        #             neighbor_index = neighbor[2]
-        #             if hot_reactant.mol_graph.get_coordination_of_site(neighbor_index) == 4: #if neighbor is also sp3 hybridized
-        #                 reactant_num_carbon_neighbors += 1 #we consider it to affect hindrance
-        #             elif hot_reactant.mol_graph.get_coordination_of_site(neighbor_index) == 1:
-        #                 reactant_num_hydrogens += 1
-        #                 if reactant_num_hydrogens == 3:
-        #                     reaction_methyl_test.append(atom)
-
-        # product_num_carbon_neighbors = 0
-        # for atom in hot_product_atoms: #repeat for products
-        #     product_num_hydrogens = 0
-        #     if hot_product.mol_graph.get_coordination_of_site(atom) == 4:
-        #         neighbor_list = hot_product.mol_graph.get_connected_sites(atom)
-        #         for neighbor in neighbor_list:
-        #             neighbor_index = neighbor[2]
-        #             if hot_product.mol_graph.get_coordination_of_site(neighbor_index) == 4:
-        #                 product_num_carbon_neighbors += 1
-        #             elif hot_product.mol_graph.get_coordination_of_site(neighbor_index) == 1:
-        #                 product_num_hydrogens += 1
-        #                 if product_num_hydrogens == 3:
-        #                     reaction_methyl_test.append(atom)
-
-        # if reactant_num_carbon_neighbors >= 3 and product_num_carbon_neighbors >= 3 and len(reaction_methyl_test) < 2: #6 was chosen as the cutoff to prevent tertiary/quaternary carbons from reacting
-        #     return True
-
-        # return False
 
 default_reaction_decision_tree = [
     (metal_metal_reaction(), Terminal.DISCARD),
@@ -1732,7 +1703,7 @@ euvl_phase2_reaction_decision_tree = [
     (reaction_is_covalent_charge_decomposable(), Terminal.DISCARD),
     (reaction_is_coupled_electron_fragment_transfer(), Terminal.DISCARD),
     (star_count_diff_above_threshold(6), Terminal.DISCARD),
-    (is_neutral_unimolecular_atom_shift(), Terminal.DISCARD),
+    (neutral_single_reactant_single_product(), Terminal.DISCARD),
     (
         fragment_matching_found(),
         [
@@ -1760,7 +1731,7 @@ euvl_phase2_logging_tree = [
     (reaction_is_covalent_charge_decomposable(), Terminal.DISCARD),
     (reaction_is_coupled_electron_fragment_transfer(), Terminal.DISCARD),
     (star_count_diff_above_threshold(6), Terminal.DISCARD),
-    (is_neutral_unimolecular_atom_shift(), Terminal.KEEP),
+    (neutral_single_reactant_single_product(), Terminal.DISCARD),
     (
         fragment_matching_found(),
         [
