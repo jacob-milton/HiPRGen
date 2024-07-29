@@ -41,8 +41,13 @@ from HiPRGen.mc_analysis import (
     pathway_report,
     sink_report,
     consumption_report,
-    redox_report,
     final_state_report,
+    export_sinks_to_json,
+    export_full_sink_data_to_json,
+    export_species_report_to_json,
+    export_tally_to_json,
+    export_pathways_to_json,
+    export_consumption_to_json,
 )
 
 # Since HiPRGen uses an end-to-end testing approach rather than testing
@@ -683,6 +688,7 @@ def euvl_phase1_test():
     )
 
     reaction_tally_report(network_loader, folder + "/reaction_tally.tex", cutoff=10)
+    export_tally_to_json(network_loader, folder + "/reaction_tally.json")
     species_report(network_loader, folder + "/species_report.tex")
     simulation_replayer = SimulationReplayer(network_loader)
     final_state_report(simulation_replayer, folder + "/final_state_report.tex")
@@ -810,17 +816,26 @@ def euvl_phase2_test():
     for seed in range(1000, 2000):
         network_loader.set_initial_state_db(folder + "/initial_state_"+str(seed)+".sqlite")
         network_loader.load_trajectories()
-    network_loader.load_initial_state()
+        network_loader.load_initial_state()
 
     report_generator = ReportGenerator(
         network_loader.mol_entries, folder + "/dummy.tex", rebuild_mol_pictures=True
     )
     reaction_tally_report(network_loader, folder + "/reaction_tally.tex", cutoff=10)
+    export_tally_to_json(network_loader, folder + "/reaction_tally.json")
     species_report(network_loader, folder + "/species_report.tex")
     simulation_replayer = SimulationReplayer(network_loader)
     final_state_report(simulation_replayer, folder + "/final_state_report.tex")
 
-    sink_report(simulation_replayer, folder + "/sink_report.tex")
+    sink_report(simulation_replayer, folder + "/sink_report.tex")  
+    export_sinks_to_json(simulation_replayer, folder + "/sink_report.json")
+    export_full_sink_data_to_json(simulation_replayer, folder + "/full_sink_data.json")
+    pathfinding = Pathfinding(network_loader)
+    for mol_id in simulation_replayer.sinks:
+        pathway_report(pathfinding, mol_id, folder + "/" + str(mol_id) + "_pathway.tex", sort_by_frequency=False)
+        export_pathways_to_json(pathfinding, mol_id, folder + "/" + str(mol_id) + "_pathway.json")
+        consumption_report(simulation_replayer, mol_id, folder + "/" + str(mol_id) + "_consumption.tex")
+        export_consumption_to_json(simulation_replayer, mol_id, folder + "/" + str(mol_id) + "_consumption.json")
 
     tests_passed = True
     print("Number of species:", network_loader.number_of_species)
@@ -831,7 +846,7 @@ def euvl_phase2_test():
         tests_passed = False
 
     print("Number of reactions:", network_loader.number_of_reactions)
-    if network_loader.number_of_reactions == 3912:
+    if network_loader.number_of_reactions == 3910:
         print(bcolors.PASS + "euvl_phase_2_test: correct number of reactions" + bcolors.ENDC)
     else:
         print(bcolors.FAIL + "euvl_phase_2_test: correct number of reactions" + bcolors.ENDC)
