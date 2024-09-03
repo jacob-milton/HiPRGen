@@ -1399,22 +1399,65 @@ class reaction_is_hindered(MSONable):
 
     def __str__(self):
         return "reaction is hindered"
+    
+    
 
     def __call__(self, reaction, mol_entries, params):
+        
+        def find_bond_changing(self, reaction, mol_entries, side_name):
+           """
+           Finds the indices of atoms in bonds that are changing (broken or formed)
+           on the specified side (either 'reactants' or 'products').
+           
+           Parameters:
+               reaction (dict): A dictionary containing details of the reaction.
+               mol_entries (dict): A dictionary mapping molecule names to their 
+               molecular details.
+               side_name (str): Either 'reactants' or 'products' to specify the side
+               being analyzed.
+           
+           Returns:
+               list: A list of atom indices involved in the bond-changing process.
+               
+           """
+           
+           atoms_indices_in_bond_changing = []
 
-        hot_reactant_atoms = []
+           for bond_list in reaction[f"{side_name}_bonds_broken"]:
+               for identity_tuple in bond_list:
+                   
+                   index = identity_tuple[0]
+                   molecule = mol_entries[reaction[side_name][index]]
+                   bond_indices = identity_tuple[1]
+                   atoms_indices_in_bond_changing.append(bond_indices)
 
-        for l in reaction["reactant_bonds_broken"]: #finds the indicies for the atoms in the broken bond
-            for t in l:
-                hot_reactant = mol_entries[reaction["reactants"][t[0]]]
-                hot_reactant_atoms.append(t[1])
+           return molecule, atoms_indices_in_bond_changing
 
-        hot_product_atoms = []
+        hot_reactant, atoms_indicies_in_breaking_bond = find_bond_changing(reaction, mol_entries, "reactant")
+        
+        hot_product, atom_indicies_in_forming_bond = find_bond_changing(reaction, mol_entries, "product")
 
-        for l in reaction["product_bonds_broken"]: #finds the indicies for the atoms in the formed bond
-            for t in l:
-                hot_product = mol_entries[reaction["products"][t[0]]]
-                hot_product_atoms.append(t[1])
+        # for bond_list in reaction["reactant_bonds_broken"]: #finds the indicies for the atoms in the broken bond
+        #     for identity_tuple in bond_list:
+                
+        #         reactant_index = identity_tuple[0]
+                
+        #         reactant_with_breaking_bond = (
+        #             mol_entries[reaction["reactants"][reactant_index]]
+        #         )
+                
+        #         bond_indicies = identity_tuple[1]
+                
+        #         atoms_indicies_in_breaking_bond.append(bond_indicies)
+
+        # atoms_indicies_in_forming_bond = []
+
+        # for bond_list in reaction["product_bonds_broken"]: #finds the indicies for the atoms in the formed bond
+        #     for identity_tuple in bond_list:
+                
+        #         product_index = identity_tuple[0]
+        #         hot_product = mol_entries[reaction["products"][t[0]]]
+        #         hot_product_atoms.append(t[1])
 
         reaction_methyl_test = []
         reactant_num_carbon_neighbors = 0
@@ -1449,6 +1492,8 @@ class reaction_is_hindered(MSONable):
             return True
 
         return False
+    
+    
 
 class neutral_single_reactant_single_product(MSONable):
     def __init__(self):
