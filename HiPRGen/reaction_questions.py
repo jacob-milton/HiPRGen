@@ -1450,7 +1450,7 @@ class reaction_is_hindered(MSONable):
 
         return False
 
-class neutral_single_reactant_single_product(MSONable):
+class neutral_closed_shell_reaction(MSONable):
     def __init__(self):
         pass
 
@@ -1481,9 +1481,9 @@ class neutral_single_reactant_single_product(MSONable):
 
         """
         
-        if reaction["number_of_reactants"] != 1 or reaction["number_of_products"] != 1:
+        # if reaction["number_of_reactants"] != 1 or reaction["number_of_products"] != 1:
             
-            return False
+        #     return False
         
         real_reactant_index = reaction["reactants"][0]
         real_product_index = reaction["products"][0]
@@ -1495,17 +1495,54 @@ class neutral_single_reactant_single_product(MSONable):
         product_charge = product_mol_entry.charge
         product_spin = product_mol_entry.spin_multiplicity
         
-        reactant_and_product_neutral = \
+        reactant_and_product_neutral = (
             reactant_charge == product_charge and reactant_charge == 0
+        )
             
-        reactant_and_product_closed_shell  = \
+        reactant_and_product_closed_shell  = (
             reactant_spin == product_spin and reactant_spin == 1
+        )
         
         if reactant_and_product_neutral and reactant_and_product_closed_shell:
             
             return True 
            
         return False
+    
+class shift_too_big(MSONable):
+    def __init__(self):
+        pass
+
+    def __str__(self):
+        return "shift is too big"
+
+    def __call__(self, reaction, mol_entries, params):
+        real_product_index = reaction["products"][0]
+        product_mol_entry = mol_entries[real_product_index]
+        product_graph = nx.Graph(product_mol_entry.graph)
+        initial_cycles = nx.cycle_basis(product_graph)
+        
+        #this is a list containing a single list of 2-tuples. The first 
+        #element of each tuple is the index (in reaction["reactants"]) which 
+        #product is forming the bond, while the second is the index of the atom
+        #forming the bond
+        
+        breaking_bond = reaction["reactant_bonds_broken"][0]
+        
+        atom_index_1 = breaking_bond[0][1]
+        atom_index_2 = breaking_bond[1][1]
+        product_graph.add_edge(atom_index_1, atom_index_2)
+        new_cycles = nx.cycle_basis(product_graph)
+        
+        try:
+            assert len(new_cycles) - len(initial_cycles) == 1
+        except AssertionError:
+            print(f"product_mol_entry.entry_id: {product_mol_entry.entry_id}")
+            print(f"atom_index_1: {atom_index_1}")
+            print(f"atom_index_2: {atom_index_2}")
+
+        return True
+        # return False
 
 default_reaction_decision_tree = [
     (metal_metal_reaction(), Terminal.DISCARD),
@@ -1703,10 +1740,20 @@ euvl_phase2_reaction_decision_tree = [
     (reaction_is_covalent_charge_decomposable(), Terminal.DISCARD),
     (reaction_is_coupled_electron_fragment_transfer(), Terminal.DISCARD),
     (star_count_diff_above_threshold(6), Terminal.DISCARD),
-    (neutral_single_reactant_single_product(), Terminal.DISCARD),
+    # ),
+            # (shift_too_big, Terminal.DISCARD)]
+    # (neutral_closed_shell_reaction(), Terminal.DISCARD),
     (
         fragment_matching_found(),
         [
+            (
+                 single_reactant_single_product(),
+                [
+                    (neutral_closed_shell_reaction(), Terminal.DISCARD),
+                    (shift_too_big(), Terminal.DISCARD),
+                    (reaction_default_true(), Terminal.KEEP),
+                ],
+            ),
             (single_reactant_single_product_not_atom_transfer(), Terminal.DISCARD),
             (single_reactant_double_product_ring_close(), Terminal.DISCARD),
             (reaction_is_hindered(), Terminal.DISCARD),
@@ -1731,10 +1778,18 @@ euvl_phase2_logging_tree = [
     (reaction_is_covalent_charge_decomposable(), Terminal.DISCARD),
     (reaction_is_coupled_electron_fragment_transfer(), Terminal.DISCARD),
     (star_count_diff_above_threshold(6), Terminal.DISCARD),
-    (neutral_single_reactant_single_product(), Terminal.DISCARD),
+    # (neutral_single_reactant_single_product(), Terminal.DISCARD),
     (
         fragment_matching_found(),
         [
+            (
+                 single_reactant_single_product(),
+                [
+                    (neutral_closed_shell_reaction(), Terminal.DISCARD),
+                    (shift_too_big(), Terminal.DISCARD),
+                    (reaction_default_true(), Terminal.DISCARD),
+                ],
+            ),
             (single_reactant_single_product_not_atom_transfer(), Terminal.DISCARD),
             (single_reactant_double_product_ring_close(), Terminal.DISCARD),
             (reaction_is_hindered(), Terminal.DISCARD),
