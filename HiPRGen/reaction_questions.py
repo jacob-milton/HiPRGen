@@ -1509,40 +1509,95 @@ class neutral_closed_shell_reaction(MSONable):
            
         return False
     
-class shift_too_big(MSONable):
+class shift_is_adjacent(MSONable):
     def __init__(self):
         pass
 
     def __str__(self):
-        return "shift is too big"
+        return "shift is to adjacent atom"
 
     def __call__(self, reaction, mol_entries, params):
-        real_product_index = reaction["products"][0]
-        product_mol_entry = mol_entries[real_product_index]
-        product_graph = nx.Graph(product_mol_entry.graph)
-        initial_cycles = nx.cycle_basis(product_graph)
-        
-        #this is a list containing a single list of 2-tuples. The first 
-        #element of each tuple is the index (in reaction["reactants"]) which 
-        #product is forming the bond, while the second is the index of the atom
-        #forming the bond
-        
-        breaking_bond = reaction["reactant_bonds_broken"][0]
-        
-        atom_index_1 = breaking_bond[0][1]
-        atom_index_2 = breaking_bond[1][1]
-        product_graph.add_edge(atom_index_1, atom_index_2)
-        new_cycles = nx.cycle_basis(product_graph)
-        
-        try:
-            assert len(new_cycles) - len(initial_cycles) == 1
-        except AssertionError:
-            print(f"product_mol_entry.entry_id: {product_mol_entry.entry_id}")
-            print(f"atom_index_1: {atom_index_1}")
-            print(f"atom_index_2: {atom_index_2}")
+        def get_breaking_bond_indicies(reaction):
+            
+            breaking_bond = reaction["reactant_bonds_broken"][0]
+            atom_index_1 = breaking_bond[0][1]
+            atom_index_2 = breaking_bond[1][1]
+            
+            return (atom_index_1, atom_index_2)
 
-        return True
-        # return False
+        def get_mol_graph(mol_index, mol_entries):
+            
+            mol_entry = mol_entries[mol_index]
+            
+            return mol_entry.graph
+
+        def get_bond_neighbors(breaking_bond_indicies, reactant_graph):
+            
+            all_neighbors = []
+        
+            for index in breaking_bond_indicies:
+                
+                atom_neighbors = list(reactant_graph.neighbors(index))
+                
+                for index in atom_neighbors:
+                    if index in breaking_bond_indicies:
+                        atom_neighbors.remove(index)
+                
+                if len(atom_neighbors) > 0: #ignore hydrogens and fluorines
+                    
+                    all_neighbors.extend(atom_neighbors)
+
+            return all_neighbors
+        
+        breaking_bond_indicies = get_breaking_bond_indicies(reaction)
+        
+        #reaction["reactants"] and reaction["products"] contain a list of 
+        #2-tuples. The first element of each tuple is the index which denoting
+        #which reactant (product) is breaking (forming) the bond, while the 
+        #second is the index of the atom forming the bond
+        
+        product_index = reaction["products"][0]
+        reactant_index = reaction["reactants"][0]
+        product_graph = get_mol_graph(product_index, mol_entries)
+        reactant_graph = get_mol_graph(reactant_index, mol_entries)
+        
+        adjacent_atoms = get_bond_neighbors(breaking_bond_indicies, reactant_graph)
+        
+        reactant_graph_copy = copy.deepcopy(reactant_graph)
+        from_index = breaking_bond_indicies[0]
+        to_index = breaking_bond_indicies[1]
+        
+        reactant_graph_copy.remove_edge(from_index, to_index)
+        
+        #we use this node match to ensure our graphs are isomorphic from
+        #the standpoint of atoms
+        
+        node_match = nx.isomorphism.categorical_node_match("specie", None)
+        
+        for atom_index in breaking_bond_indicies:
+            for adjacent_atom_index in adjacent_atoms:
+        
+                test_copy = copy.deepcopy(reactant_graph_copy)
+                current_bonds = reactant_graph_copy.edges
+                
+                new_bond = (
+                    (atom_index, adjacent_atom_index) not in current_bonds
+                )
+                
+                if new_bond:
+                    
+                    test_copy.add_edge(atom_index, adjacent_atom_index)
+        
+                    shift_to_adjacent_atom = (
+                        nx.is_isomorphic(test_copy, product_graph, node_match)
+                    )
+                    
+                    if shift_to_adjacent_atom:
+
+                        return True
+        
+        return False
+
 
 default_reaction_decision_tree = [
     (metal_metal_reaction(), Terminal.DISCARD),
@@ -1732,6 +1787,7 @@ euvl_phase1_reaction_logging_tree = [
     (reaction_default_true(), Terminal.DISCARD),
 ]
 
+
 euvl_phase2_reaction_decision_tree = [
     (is_redox_reaction(), Terminal.DISCARD),
     (dG_above_threshold(0.0, "free_energy", 0.0), Terminal.DISCARD),
@@ -1740,21 +1796,19 @@ euvl_phase2_reaction_decision_tree = [
     (reaction_is_covalent_charge_decomposable(), Terminal.DISCARD),
     (reaction_is_coupled_electron_fragment_transfer(), Terminal.DISCARD),
     (star_count_diff_above_threshold(6), Terminal.DISCARD),
-    # ),
-            # (shift_too_big, Terminal.DISCARD)]
-    # (neutral_closed_shell_reaction(), Terminal.DISCARD),
+
     (
         fragment_matching_found(),
         [
             (
                  single_reactant_single_product(),
                 [
+                    (single_reactant_single_product_not_atom_transfer(), Terminal.DISCARD),
                     (neutral_closed_shell_reaction(), Terminal.DISCARD),
-                    (shift_too_big(), Terminal.DISCARD),
-                    (reaction_default_true(), Terminal.KEEP),
+                    (shift_is_adjacent(),Terminal.KEEP),
+                    (reaction_default_true(), Terminal.DISCARD),
                 ],
             ),
-            (single_reactant_single_product_not_atom_transfer(), Terminal.DISCARD),
             (single_reactant_double_product_ring_close(), Terminal.DISCARD),
             (reaction_is_hindered(), Terminal.DISCARD),
             (
@@ -1778,19 +1832,19 @@ euvl_phase2_logging_tree = [
     (reaction_is_covalent_charge_decomposable(), Terminal.DISCARD),
     (reaction_is_coupled_electron_fragment_transfer(), Terminal.DISCARD),
     (star_count_diff_above_threshold(6), Terminal.DISCARD),
-    # (neutral_single_reactant_single_product(), Terminal.DISCARD),
+
     (
         fragment_matching_found(),
         [
             (
                  single_reactant_single_product(),
                 [
+                    (single_reactant_single_product_not_atom_transfer(), Terminal.DISCARD),
                     (neutral_closed_shell_reaction(), Terminal.DISCARD),
-                    (shift_too_big(), Terminal.DISCARD),
+                    (shift_is_adjacent(), Terminal.DISCARD),
                     (reaction_default_true(), Terminal.DISCARD),
                 ],
             ),
-            (single_reactant_single_product_not_atom_transfer(), Terminal.DISCARD),
             (single_reactant_double_product_ring_close(), Terminal.DISCARD),
             (reaction_is_hindered(), Terminal.DISCARD),
             (
