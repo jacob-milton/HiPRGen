@@ -1517,7 +1517,48 @@ class shift_is_adjacent(MSONable):
         return "shift is to adjacent atom"
 
     def __call__(self, reaction, mol_entries, params):
+        """
+        For single reactant single product reactions, we only allow the
+        movement of groups between adjacent atoms. This class method determines
+        whether or not a given reaction fits that criterion by breaking the
+        bond that will be breaking, forming a bond between each atom in the
+        breaking bond and its neighbors, and testing if the resulting graph
+        is isomorphic to the product of the reaction.
+
+        Parameters
+        ----------
+        reaction : dict
+            the dictionary with information associated with this reaction
+        mol_entries : dict
+            a dictionary containing mol_entrys generated in mol_entry.py as values
+            with assigned indicies as keys
+        params : dict
+            optional parameters passed to the call, not used here
+
+        Returns
+        -------
+        Bool
+            True if the reaction is between adjacent atoms, False otherwise
+
+        """
         def get_breaking_bond_indicies(reaction):
+            """
+            Extracts the indicies of atoms in the bond breaking in this
+            reaction
+
+            Parameters
+            ----------
+            reaction : dict
+                describes the species involved in the reaction
+
+            Returns
+            -------
+            atom_index_1 : int
+                index of one of the atoms of the bond breaking in this reaction
+            atom_index_2 : int
+                index of one of the atoms of the bond breaking in this reaction
+
+            """
             
             breaking_bond = reaction["reactant_bonds_broken"][0]
             atom_index_1 = breaking_bond[0][1]
@@ -1526,12 +1567,51 @@ class shift_is_adjacent(MSONable):
             return (atom_index_1, atom_index_2)
 
         def get_mol_graph(mol_index, mol_entries):
+            """
+            mol_entries is a dictionary storing a lot of data related to
+            species. This function just takes the index of a given mol_entry,
+            and returns its graph
+
+            Parameters
+            ----------
+            mol_index : int
+                index corresponding to this mol_entry
+            mol_entries : dict
+                dictionary containing all mol entries from this run of HiPRGen
+
+            Returns
+            -------
+            networkx MultiGraph
+                the Multigraph associated with this mol entry
+
+            """
             
             mol_entry = mol_entries[mol_index]
             
             return mol_entry.graph
 
         def get_bond_neighbors(breaking_bond_indicies, reactant_graph):
+            """
+            Finds the indicies of atoms adjacent to the atoms which have a bond
+            that is breaking in this reaction. Ignores hydrogen and fluorine
+            atoms because these form only one bond, and if either of these
+            atoms is in breaking_bond_indicies, its only neighbor will already
+            be in breaking_bond_indicies
+
+            Parameters
+            ----------
+            breaking_bond_indicies : tuple
+                2-tuple of integers generated via get_breaking_bond_indicies
+            reactant_graph : networkx MultiGraph
+                graph of the reactant
+
+            Returns
+            -------
+            all_neighbors : list
+                list of indicies of atoms adjacent to the atoms in the breaking
+                bond, discluding the indicies of the atoms themselves.
+
+            """
             
             all_neighbors = []
         
@@ -1561,7 +1641,9 @@ class shift_is_adjacent(MSONable):
         product_graph = get_mol_graph(product_index, mol_entries)
         reactant_graph = get_mol_graph(reactant_index, mol_entries)
         
-        adjacent_atoms = get_bond_neighbors(breaking_bond_indicies, reactant_graph)
+        adjacent_atoms = (
+            get_bond_neighbors(breaking_bond_indicies, reactant_graph)
+        )
         
         reactant_graph_copy = copy.deepcopy(reactant_graph)
         from_index = breaking_bond_indicies[0]
