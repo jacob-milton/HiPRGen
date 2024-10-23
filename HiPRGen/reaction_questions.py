@@ -76,12 +76,12 @@ def run_decision_tree(
     while type(node) == list:
         next_node = None
         for (question, new_node) in node:
-            # if isinstance(question, is_attachment):
-            #         print(f"returns {question(reaction, mol_entries, params)}")
             if question(reaction, mol_entries, params):
+
                 # if decision_pathway is a list,
                 # append the question which
                 # answered true i.e the edge we follow
+
                 if decision_pathway is not None:
                     decision_pathway.append(question)
 
@@ -1151,6 +1151,69 @@ class not_h_transfer(MSONable):
         return False
 
 
+class reaction_is_h_transfer(MSONable):
+    def __init__(self):
+        pass
+
+    def __str__(self):
+        return "reaction is h transfer"
+
+    def __call__(self, reaction, mol_entries, params):
+        """
+        Determines if a given reaction involves hydrogen (H) transfer.
+
+        This method checks whether the reaction is an H transfer by calling
+        `not_h_transfer()`, which checks if hydrogen is involved in the
+        reaction. If the reaction is identified as not involving hydrogen
+        transfer, this method negates that result and returns `True` if
+        H transfer is involved.
+
+        Parameters
+        ----------
+        reaction : dict
+            A dictionary containing information about the reaction,
+            including details of reactants and products. It should include
+            keys like 'reactants', 'products', and possibly additional
+            metadata (e.g., bonds broken or formed).
+
+        mol_entries : dict
+            A dictionary of molecular entries, where keys are reactant
+            and product indices, and values are molecule objects or
+            mol_entry instances containing properties such as charge,
+            graph structures, and other molecular details.
+
+        params : dict
+            Optional parameters passed to the method, such as reaction
+            conditions (e.g., temperature, free energy). These are
+            currently not used in this function.
+
+        Returns
+        -------
+        bool
+            Returns `True` if the reaction involves hydrogen transfer,
+            and `False` otherwise.
+
+        Notes
+        -----
+        This method leverages the `not_h_transfer()` function, which
+        checks the presence or absence of hydrogen atoms involved in the
+        reaction, and reverses its logic. If `not_h_transfer()` returns
+        `True` (indicating no hydrogen transfer), `reaction_is_h_transfer()`
+        will return `False`, and vice versa.
+        """
+
+        reaction_isnt_h_transfer = (
+            not_h_transfer()(reaction, mol_entries, params)
+        )
+
+        reaction_is_h_transfer = not reaction_isnt_h_transfer
+
+        if reaction_is_h_transfer:
+            return True
+
+        return False
+
+
 class fragments_are_not_2A_B(MSONable):
     def __init__(self):
         pass
@@ -1250,6 +1313,116 @@ class h_minus_abstraction(MSONable):
             hot_product = mol_entries[reaction["products"][hot_product_ind]]
             if hot_product.charge - cold_reactant.charge == -1:
                 return True
+
+        return False
+
+
+class nonstandard_h_transfer(MSONable):
+
+    def __init__(self):
+        pass
+
+    def __str__(self):
+        return "nonstandard H transfer"
+
+    def __call__(self, reaction, mol_entries, params):
+        """
+        This class method determines whether a given hydrogen transfer reaction
+        involves a nonstandard hydrogen transfer (i.e., more than one electron
+        is transferred). The function compares the charges of the reactant
+        gaining hydrogen and the product with hydrogen to identify if the
+        electron count involved in the transfer exceeds standard transfer types
+        like proton, hydride, or hydrogen atom transfer.
+
+        Parameters
+        ----------
+        reaction : dict
+            Dictionary with information associated with this reaction,
+            including bond-breaking and bond-forming details.
+        mol_entries : dict
+            A dictionary containing mol_entrys generated in mol_entry.py as
+            values with assigned indices as keys.
+        params : dict
+            Optional parameters passed to the call, not used here.
+
+        Returns
+        -------
+        bool
+            True if the hydrogen transfer is nonstandard (more than 1 electron
+            transferred), False otherwise.
+        """
+
+        def get_reactant_gaining_H_index(reaction):
+            """
+            Determines the index of the reactant that is gaining the hydrogen
+            in a given reaction. This is done by identifying the reactant
+            losing the hydrogen and then selecting the other reactant.
+
+            Parameters
+            ----------
+            reaction : dict
+                Dictionary containing information about the reaction, including
+                bond-breaking details.
+
+            Returns
+            -------
+            int
+                The index of the reactant that is gaining the hydrogen.
+            """
+
+            reactant_losing_H_index = (
+                reaction["reactant_bonds_broken"][0][0][0]
+            )
+
+            return 1 if reactant_losing_H_index == 0 else 0
+
+        def get_mol_entry_from_index(reaction, entry_type, mol_entries, index):
+            """
+            Retrieves the molecular entry (mol_entry) for a specified reactant
+            or product in the reaction. The index is used to select the entry
+            from the provided mol_entries list.
+
+            Parameters
+            ----------
+            reaction : dict
+                Dictionary containing information about the reaction.
+            entry_type : str
+                Either "reactant" or "product", specifying whether to retrieve
+                the mol_entry for a reactant or a product.
+            mol_entries : list
+                List of molecular entries to retrieve from.
+            index : int
+                The index of the molecular entry to retrieve.
+
+            Returns
+            -------
+            mol_entry
+                The molecular entry corresponding to the specified index.
+            """
+
+            if entry_type == "reactant":
+
+                return mol_entries[reaction["reactants"][index]]
+
+            elif entry_type == "product":
+
+                return mol_entries[reaction["products"][index]]
+
+        reactant_gaining_H_index = get_reactant_gaining_H_index(reaction)
+
+        reactant_gaining_H = get_mol_entry_from_index(
+            reaction, "reactant", mol_entries, reactant_gaining_H_index
+        )
+
+        product_with_H_index = reaction["product_bonds_broken"][0][0][0]
+
+        product_with_H = get_mol_entry_from_index(
+            reaction, "product", mol_entries, product_with_H_index
+        )
+
+        if abs(product_with_H.charge - reactant_gaining_H.charge) > 1:
+
+            return True
 
         return False
 
@@ -1621,6 +1794,7 @@ class shift_is_adjacent(MSONable):
                 
                 for index in atom_neighbors:
                     if index in breaking_bond_indicies:
+
                         atom_neighbors.remove(index)
                 
                 if len(atom_neighbors) > 0: #ignore hydrogens and fluorines
@@ -1781,6 +1955,7 @@ euvl_phase1_reaction_decision_tree = [
                     (not_h_transfer(), Terminal.DISCARD),
                     (h_abstraction_from_closed_shell_reactant(), Terminal.DISCARD),
                     (h_minus_abstraction(), Terminal.DISCARD),
+                    (nonstandard_h_transfer(), Terminal.DISCARD),
                     (dG_above_threshold(0.0, "free_energy", 0.0, 0.1), Terminal.KEEP),
                     (reaction_default_true(), Terminal.DISCARD),
                 ],
@@ -1846,6 +2021,7 @@ euvl_phase1_reaction_logging_tree = [
                     (not_h_transfer(), Terminal.DISCARD),
                     (h_abstraction_from_closed_shell_reactant(), Terminal.DISCARD),
                     (h_minus_abstraction(), Terminal.DISCARD),
+                    (nonstandard_h_transfer(), Terminal.DISCARD),
                     (dG_above_threshold(0.0, "free_energy", 0.0, 0.1), Terminal.DISCARD),
                     (reaction_default_true(), Terminal.DISCARD),
                 ],
@@ -1891,6 +2067,20 @@ euvl_phase2_reaction_decision_tree = [
                     (reaction_default_true(), Terminal.DISCARD),
                 ],
             ),
+            (
+                reaction_is_h_transfer(),
+                [
+                    (nonstandard_h_transfer(), Terminal.DISCARD),
+                    (
+                        reaction_is_covalent_decomposable(),
+                        [
+                            (fragments_are_not_2A_B(), Terminal.DISCARD),
+                            (reaction_default_true(), Terminal.KEEP),
+                        ],
+                    ),
+                    (reaction_default_true(), Terminal.KEEP),
+                ],
+            ),
             (single_reactant_double_product_ring_close(), Terminal.DISCARD),
             (reaction_is_hindered(), Terminal.DISCARD),
             (
@@ -1924,6 +2114,20 @@ euvl_phase2_logging_tree = [
                     (single_reactant_single_product_not_atom_transfer(), Terminal.DISCARD),
                     (neutral_closed_shell_reaction(), Terminal.DISCARD),
                     (shift_is_adjacent(), Terminal.DISCARD),
+                    (reaction_default_true(), Terminal.DISCARD),
+                ],
+            ),
+            (
+                reaction_is_h_transfer(),
+                [
+                    (nonstandard_h_transfer(), Terminal.DISCARD),
+                    (
+                        reaction_is_covalent_decomposable(),
+                        [
+                            (fragments_are_not_2A_B(), Terminal.DISCARD),
+                            (reaction_default_true(), Terminal.DISCARD),
+                        ],
+                    ),
                     (reaction_default_true(), Terminal.DISCARD),
                 ],
             ),
