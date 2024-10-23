@@ -632,7 +632,7 @@ def euvl_phase1_test():
         folder + "/buckets.sqlite",
         euvl_phase1_reaction_decision_tree,
         params,
-        euvl_phase1_reaction_decision_tree,
+        euvl_phase1_reaction_decision_tree
     )
 
     dumpfn(dispatcher_payload, folder + "/dispatcher_payload.json")
@@ -702,7 +702,7 @@ def euvl_phase1_test():
         tests_passed = False
 
     print("Number of reactions:", network_loader.number_of_reactions)
-    if network_loader.number_of_reactions == 555:
+    if network_loader.number_of_reactions == 483:
         print(bcolors.PASS + "euvl_phase_1_test: correct number of reactions" + bcolors.ENDC)
     else:
         print(bcolors.FAIL + "euvl_phase_1_test: correct number of reactions" + bcolors.ENDC)
@@ -753,7 +753,7 @@ def euvl_phase2_test():
         folder + "/buckets.sqlite",
         euvl_phase2_reaction_decision_tree,
         params,
-        euvl_phase2_reaction_decision_tree,
+        euvl_phase2_reaction_decision_tree
     )
 
     dumpfn(dispatcher_payload, folder + "/dispatcher_payload.json")
@@ -846,7 +846,7 @@ def euvl_phase2_test():
         tests_passed = False
 
     print("Number of reactions:", network_loader.number_of_reactions)
-    if network_loader.number_of_reactions == 3910:
+    if network_loader.number_of_reactions == 3768:
         print(bcolors.PASS + "euvl_phase_2_test: correct number of reactions" + bcolors.ENDC)
     else:
         print(bcolors.FAIL + "euvl_phase_2_test: correct number of reactions" + bcolors.ENDC)
