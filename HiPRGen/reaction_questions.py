@@ -426,6 +426,7 @@ class dcharge_too_large(MSONable):
         else:
             return False
 
+
 class is_attachment(MSONable):
     def __init__(self):
         pass
@@ -1270,6 +1271,122 @@ class single_reactant_double_product_ring_close(MSONable):
         return False
 
 
+class radical_abstraction(MSONable):
+    def __init__(self):
+        pass
+
+    def __str__(self):
+        return "non hydrogen radical abstraction"
+
+    def __call__(self, reaction, mol_entries, params):
+        def less_than_two_reactants_or_products(reaction):
+            less_than_two_reactants = reaction["number_of_reactants"] != 2
+            less_than_two_products = reaction["number_of_products"] != 2
+            return less_than_two_reactants or less_than_two_products
+
+        def get_mol_entry_from_index(reaction, entry_type, mol_entries, index):
+            """
+            Retrieves the molecular entry (mol_entry) for a specified reactant
+            or product in the reaction. The index is used to select the entry
+            from the provided mol_entries list.
+
+            Parameters
+            ----------
+            reaction : dict
+                Dictionary containing information about the reaction.
+            entry_type : str
+                Either "reactant" or "product", specifying whether to retrieve
+                the mol_entry for a reactant or a product.
+            mol_entries : list
+                List of molecular entries to retrieve from.
+            index : int
+                The index of the molecular entry to retrieve.
+
+            Returns
+            -------
+            mol_entry
+                The molecular entry corresponding to the specified index.
+            """
+
+            if entry_type == "reactant":
+
+                return mol_entries[reaction["reactants"][index]]
+
+            elif entry_type == "product":
+
+                return mol_entries[reaction["products"][index]]
+
+        def get_index_product_not_forming_bond(product_forming_bond_index):
+            return 0 if product_forming_bond_index == 1 else 1
+
+        def isnt_radical(reaction, product_forming_bond_index, mol_entries):
+            reactant_losing_bond_index = (
+                reaction["reactant_bonds_broken"][0][0][0]
+            )
+
+            product_not_forming_bond_index = (
+                get_index_product_not_forming_bond(product_forming_bond_index)
+            )
+
+            reactant_losing_bond = (
+                get_mol_entry_from_index(
+                    reaction,
+                    "reactant",
+                    mol_entries,
+                    reactant_losing_bond_index
+                    )
+            )
+
+            product_not_forming_bond = (
+                get_mol_entry_from_index(
+                    reaction,
+                    "product",
+                    mol_entries,
+                    product_not_forming_bond_index
+                    )
+            )
+
+            reaction_isnt_abstraction = (
+                reactant_losing_bond.spin_multiplicity ==
+                product_not_forming_bond.spin_multiplicity
+            )
+
+            return reaction_isnt_abstraction
+
+        if less_than_two_reactants_or_products(reaction):
+
+            return False
+
+        product_forming_bond_index = (
+            reaction["product_bonds_broken"][0][0][0]
+        )
+
+        if isnt_radical(reaction, product_forming_bond_index, mol_entries):
+
+            return False
+
+        product_forming_bond = (
+            get_mol_entry_from_index(
+                reaction,
+                "product",
+                mol_entries,
+                product_forming_bond_index
+                )
+        )
+
+        # in an abstraction reaction, the species that was a radical gains
+        # a bond. The opposite is true for an addition or addition/elimination
+        # reaction.
+
+        reaction_is_abstraction = product_forming_bond.spin_multiplicity != 2
+
+        if reaction_is_abstraction:
+
+            return True
+
+        return False
+
+
 class h_abstraction_from_closed_shell_reactant(MSONable):
     def __init__(self):
         pass
@@ -2063,7 +2180,7 @@ euvl_phase2_reaction_decision_tree = [
                 [
                     (single_reactant_single_product_not_atom_transfer(), Terminal.DISCARD),
                     (neutral_closed_shell_reaction(), Terminal.DISCARD),
-                    (shift_is_adjacent(),Terminal.KEEP),
+                    (shift_is_adjacent(), Terminal.KEEP),
                     (reaction_default_true(), Terminal.DISCARD),
                 ],
             ),
@@ -2081,6 +2198,7 @@ euvl_phase2_reaction_decision_tree = [
                     (reaction_default_true(), Terminal.KEEP),
                 ],
             ),
+            (radical_abstraction(), Terminal.DISCARD),
             (single_reactant_double_product_ring_close(), Terminal.DISCARD),
             (reaction_is_hindered(), Terminal.DISCARD),
             (
@@ -2131,6 +2249,7 @@ euvl_phase2_logging_tree = [
                     (reaction_default_true(), Terminal.DISCARD),
                 ],
             ),
+            (radical_abstraction(), Terminal.KEEP),
             (single_reactant_double_product_ring_close(), Terminal.DISCARD),
             (reaction_is_hindered(), Terminal.DISCARD),
             (
