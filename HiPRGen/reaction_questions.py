@@ -1,4 +1,5 @@
 import math
+import sys
 from HiPRGen.mol_entry import MoleculeEntry
 from functools import partial
 import itertools
@@ -750,7 +751,6 @@ class reaction_is_coupled_electron_fragment_transfer(MSONable): # Remove A + B+ 
             reactant_hashes = set()
             for i in range(reaction["number_of_reactants"]):
                 reactant_id = reaction["reactants"][i]
-                # print("reactant_id", reactant_id)
                 reactant = mol_entries[reactant_id]
                 reactants.append(reactant)
                 reactant_hashes.add(reactant.covalent_hash)
@@ -760,7 +760,6 @@ class reaction_is_coupled_electron_fragment_transfer(MSONable): # Remove A + B+ 
             product_hashes = set()
             for i in range(reaction["number_of_products"]):
                 product_id = reaction["products"][i]
-                # print("product_id", product_id)
                 product = mol_entries[product_id]
                 product_hashes.add(product.covalent_hash)
                 product_charge_hashes.add(product.covalent_hash + "_" + str(product.charge))
@@ -779,11 +778,8 @@ class reaction_is_coupled_electron_fragment_transfer(MSONable): # Remove A + B+ 
                         smaller_hash = reactants[0].covalent_hash
                     except ValueError:
                         return True
-                # print("bigger_reactant", bigger_reactant)
                 for frag_complex in reactants[bigger_reactant].fragment_data:
                     if smaller_hash in frag_complex.fragment_hashes:
-                        # print("hash found!")
-                        # print(huh)
                         return False
                 return True
 
@@ -1272,6 +1268,8 @@ class single_reactant_double_product_ring_close(MSONable):
 
 
 class radical_abstraction(MSONable):
+    # TODO remove redox-coupled isomerizations
+
     def __init__(self):
         pass
 
@@ -1280,8 +1278,8 @@ class radical_abstraction(MSONable):
 
     def __call__(self, reaction, mol_entries, params):
         def less_than_two_reactants_or_products(reaction):
-            less_than_two_reactants = reaction["number_of_reactants"] != 2
-            less_than_two_products = reaction["number_of_products"] != 2
+            less_than_two_reactants = reaction["number_of_reactants"] < 2
+            less_than_two_products = reaction["number_of_products"] < 2
             return less_than_two_reactants or less_than_two_products
 
         def get_mol_entry_from_index(reaction, entry_type, mol_entries, index):
@@ -1319,52 +1317,51 @@ class radical_abstraction(MSONable):
         def get_index_product_not_forming_bond(product_forming_bond_index):
             return 0 if product_forming_bond_index == 1 else 1
 
-        def isnt_radical(reaction, product_forming_bond_index, mol_entries):
-            reactant_losing_bond_index = (
-                reaction["reactant_bonds_broken"][0][0][0]
-            )
-
-            product_not_forming_bond_index = (
-                get_index_product_not_forming_bond(product_forming_bond_index)
-            )
-
-            reactant_losing_bond = (
+        def is_radical(reaction, mol_entries):
+            
+            for index in (0,1):
+                mol_entry = (
                 get_mol_entry_from_index(
-                    reaction,
-                    "reactant",
-                    mol_entries,
-                    reactant_losing_bond_index
-                    )
-            )
+                        reaction,
+                        "reactant",
+                        mol_entries,
+                        index)
+                )
 
-            product_not_forming_bond = (
+                if mol_entry.spin_multiplicity == 2:
+                    return True
+
+            return False
+
+        def test_redox_coupled_electron_transfer(reactant_losing_bond, product_forming_bond):
+            return reactant_losing_bond.formula == product_forming_bond.formula
+        
+        def is_isnt_addition_elimination(reaction, mol_entries):
+            for index in (0,1):
+                mol_entry = (
                 get_mol_entry_from_index(
-                    reaction,
-                    "product",
-                    mol_entries,
-                    product_not_forming_bond_index
-                    )
-            )
+                        reaction,
+                        "product",
+                        mol_entries,
+                        index)
+                )
 
-            reaction_isnt_abstraction = (
-                reactant_losing_bond.spin_multiplicity ==
-                product_not_forming_bond.spin_multiplicity
-            )
+                if mol_entry.spin_multiplicity == 2:
+                    return True
 
-            return reaction_isnt_abstraction
+            return False
 
         if less_than_two_reactants_or_products(reaction):
 
             return False
 
+        if not is_radical(reaction, mol_entries):
+
+            return False
+        
         product_forming_bond_index = (
             reaction["product_bonds_broken"][0][0][0]
         )
-
-        if isnt_radical(reaction, product_forming_bond_index, mol_entries):
-
-            return False
-
         product_forming_bond = (
             get_mol_entry_from_index(
                 reaction,
@@ -1373,12 +1370,46 @@ class radical_abstraction(MSONable):
                 product_forming_bond_index
                 )
         )
+        
+        reactant_losing_bond_index = (
+            reaction["reactant_bonds_broken"][0][0][0]
+        )
+        
+        
+
+        reactant_losing_bond = (
+            get_mol_entry_from_index(
+                reaction,
+                "reactant",
+                mol_entries,
+                reactant_losing_bond_index
+                )
+        )
+
+        if test_redox_coupled_electron_transfer(reactant_losing_bond, product_forming_bond):
+            return False
+        
+        if not is_isnt_addition_elimination(reaction, mol_entries):
+            return False
+
+        reactant_not_losing_bond_index = 0 if reactant_losing_bond_index == 1 else 1
+        
+        reactant_not_losing_bond = (
+            get_mol_entry_from_index(
+                reaction,
+                "reactant",
+                mol_entries,
+                reactant_not_losing_bond_index)
+        )
+
+        reactant_gaining_bond_is_radical = reactant_not_losing_bond.spin_multiplicity == 2
 
         # in an abstraction reaction, the species that was a radical gains
         # a bond. The opposite is true for an addition or addition/elimination
         # reaction.
 
-        reaction_is_abstraction = product_forming_bond.spin_multiplicity != 2
+        product_forming_bond_isnt_radical = product_forming_bond.spin_multiplicity != 2
+        reaction_is_abstraction = reactant_gaining_bond_is_radical and product_forming_bond_isnt_radical
 
         if reaction_is_abstraction:
 
